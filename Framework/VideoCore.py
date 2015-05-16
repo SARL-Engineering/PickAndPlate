@@ -224,11 +224,6 @@ class PickAndPlateVideo(QtCore.QThread):
             cropped = self.crop_image(self.raw_frame)
             cropped = cropped.copy()
             frame = cv2.cvtColor(cropped, cv2.COLOR_BGR2RGB)
-            # b = cropped[:, :, 0]
-            # r = cropped[:, :, 2]
-            # cropped[:, :, 0] = r
-            # cropped[:, :, 2] = b
-            # frame = cropped
 
         elif self.video_output_type == "Greyscale":
             frame = cv2.cvtColor(self.crop_image(self.raw_frame), cv2.COLOR_BGR2GRAY)
@@ -256,11 +251,21 @@ class PickAndPlateVideo(QtCore.QThread):
 
             frame = cv2.bitwise_and(frame, mask_frame)
 
-            frame = self.masked_detect_and_overlay(frame)
+            frame = self.masked_detect_and_overlay(frame, frame)
 
             frame = self.crop_image(frame)
         elif self.video_output_type == "Original w/ Detected":
-            pass
+            frame = cv2.cvtColor(self.raw_frame, cv2.COLOR_RGB2GRAY)
+            return_val, frame = cv2.threshold(frame, min_thresh, 255, cv2.cv.CV_THRESH_BINARY)
+
+            mask_frame = numpy.zeros((y_res, x_res), numpy.uint8)
+            cv2.circle(mask_frame, (x_center, y_center), (crop_dim_half - usable_offset), 255, -1)
+
+            frame = cv2.bitwise_and(frame, mask_frame)
+
+            frame = self.masked_detect_and_overlay(frame, self.raw_frame)
+
+            frame = self.crop_image(frame)
 
         try:
             self.images_displayed = False
@@ -299,7 +304,7 @@ class PickAndPlateVideo(QtCore.QThread):
     def show_cycle_run(self):
         pass
 
-    def masked_detect_and_overlay(self, input_frame):
+    def masked_detect_and_overlay(self, input_frame, overlay_frame):
         #FIXME: This is for testing and needs to be implemented properly
         min_blob_dist = self.settings.value("system/detection_calibration/min_blob_distance").toDouble()[0]
         min_repeat = self.settings.value("system/detection_calibration/min_repeat").toInt()[0]
@@ -365,7 +370,7 @@ class PickAndPlateVideo(QtCore.QThread):
         detector = cv2.SimpleBlobDetector(blob_params)
         keypoints = detector.detect(input_frame)
         self.number_embryos_detected_signal.emit(len(keypoints))
-        output_frame = cv2.drawKeypoints(input_frame, keypoints, color=(255, 0, 0))
+        output_frame = cv2.drawKeypoints(overlay_frame, keypoints, color=(255, 0, 0))
         return output_frame
 
     def convert_to_qimage(self, input_matrix):
