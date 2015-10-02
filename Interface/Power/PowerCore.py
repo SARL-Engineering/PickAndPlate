@@ -67,8 +67,11 @@ class Power(QtCore.QObject):
         self.threads.append(self.master.system_tab.networking_tab)
         self.threads.append(self.master.system_tab.system_log_tab)
         self.threads.append(self.main_window.video)
+        self.threads.append(self.main_window.controller)
+        self.threads.append(self.main_window.cycle_handler)
         self.threads.append(self.master.status)
         self.threads.append(self.master.tables_tab)
+
 
         # ########## Setup signal and slot connections ##########
         self.connect_signals_to_slots()

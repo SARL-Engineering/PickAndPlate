@@ -42,6 +42,10 @@ from Framework import LoggerCore
 # Global Variables
 #####################################
 
+#####################################
+# Things to do
+#####################################
+# TODO: Add in logic for paring down the log file if it starts getting big
 
 #####################################
 # SystemLog Definition

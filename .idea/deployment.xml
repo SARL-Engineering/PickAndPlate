@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
-  <component name="PublishConfigData" autoUpload="Always" serverName="Beaglebone Black" deleteMissingItems="true" createEmptyFolders="true" autoUploadExternalChanges="true">
+  <component name="PublishConfigData" autoUpload="Always" serverName="Pick and Plate" deleteMissingItems="true" createEmptyFolders="true" autoUploadExternalChanges="true">
     <serverData>
-      <paths name="Beaglebone Black">
+      <paths name="Pick and Plate">
         <serverdata>
           <mappings>
             <mapping deploy="/PickAndPlate" local="$PROJECT_DIR$" web="/" />

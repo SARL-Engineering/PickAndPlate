@@ -71,13 +71,32 @@ class FrameGrabber(QtCore.QThread):
         self.video_camera.set(CV_CAP_PROP_FPS, SYSTEM_CAMERA_FRAME_RATE)
 
         self.not_abort = True
-        self.should_process_video = False
+        self.process_continuous = False
+        self.process_single = False
 
     def run(self):
         while self.not_abort:
-            if self.should_process_video:
+            if self.process_continuous:
                 self.video_camera.grab()
-            self.msleep(100)
+                self.msleep(10)
+            elif self.process_single:
+                self.video_camera.grab()
+                self.process_single = False
+            else:
+                self.msleep(100)
+
+    def set_process_continuous(self):
+        self.process_single = False
+        self.process_continuous = True
+
+    def set_process_single(self):
+        self.process_continuous = False
+        self.process_single = True
+
+    def stop_processing(self):
+        self.process_single = False
+        self.process_continuous = False
+
 
 
 #####################################
@@ -143,18 +162,19 @@ class PickAndPlateVideo(QtCore.QThread):
 
     def run(self):
         self.logger.debug("PickAndPlate Video Thread Starting...")
-        self.msleep(1500)
+        # FIXME: WHY IS THIS HERE self.msleep(1500)
         while self.not_abort_flag:
             if self.reconnect_to_camera_flag:
                 self.reconnect_to_camera()
                 self.msleep(500)
             elif self.camera_connected_flag:
                 if self.video_being_used:
-                    self.frame_grabber.should_process_video = True
+                    #self.frame_grabber.should_process_video = True
                     self.get_camera_frame()
                     self.show_needed_images()
                 else:
-                    self.frame_grabber.should_process_video = False
+                    self.frame_grabber.stop_processing()
+                    #self.frame_grabber.should_process_video = False
                 self.msleep(40)
 
         self.frame_grabber.not_abort = False
@@ -200,10 +220,13 @@ class PickAndPlateVideo(QtCore.QThread):
 
     def show_needed_images(self):
         if self.video_output_widget_name == self.DETECTION_CAL:
+            self.frame_grabber.set_process_continuous()
             self.show_detection_calibration()
         elif self.video_output_widget_name == self.SYSTEM_CAL:
+            self.frame_grabber.set_process_continuous()
             self.show_system_calibration()
         elif self.video_output_widget_name == self.CYCLE_RUN:
+            # Set single processing inside of cycle control loop
             self.show_cycle_run()
 
     def show_detection_calibration(self):
@@ -390,8 +413,8 @@ class PickAndPlateVideo(QtCore.QThread):
         return cropped
 
     def get_camera_frame(self):
-        self.raw_frame = cv2.imread('images/embryo_image.png', cv2.IMREAD_COLOR)
-        # return_val, self.raw_frame = self.video_camera.retrieve()
+        #self.raw_frame = cv2.imread('images/embryo_image.png', cv2.IMREAD_COLOR)
+        return_val, self.raw_frame = self.video_camera.retrieve()
 
     def on_general_camera_settings_changed_slot(self):
         self.settings.sync()

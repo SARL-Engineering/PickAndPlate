@@ -44,6 +44,8 @@ from Interface.InterfaceCore import PickAndPlateInterface
 from Framework.LoggerCore import PickAndPlateLogger
 from Framework.SettingsCore import PickAndPlateSettings
 from Framework.VideoCore import PickAndPlateVideo
+from Framework.ControllerCore import PickAndPlateController
+from Framework.CycleHandlerCore import PickAndPlateCycleHandler
 
 #####################################
 # Global Variables
@@ -94,6 +96,8 @@ class PickAndPlateWindow(QtGui.QMainWindow, form_class):
 
         # ########## Instantiation of program classes ##########
         self.video = PickAndPlateVideo(self)
+        self.controller = PickAndPlateController(self)
+        self.cycle_handler = PickAndPlateCycleHandler(self)
 
         self.interface = PickAndPlateInterface(self)  # This one HAS to be last so it can handle killing threads
 

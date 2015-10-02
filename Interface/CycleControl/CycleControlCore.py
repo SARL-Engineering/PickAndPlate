@@ -50,6 +50,11 @@ pick_video_error_image_path = None
 # Status Class Definition
 #####################################
 class CycleControl(QtCore.QThread):
+    start_cycle_signal = QtCore.pyqtSignal()
+    stop_cycle_signal = QtCore.pyqtSignal()
+    pause_cycle_signal = QtCore.pyqtSignal()
+    resume_cycle_signal = QtCore.pyqtSignal()
+
     def __init__(self, main_window, master):
         QtCore.QThread.__init__(self)
 
@@ -87,12 +92,25 @@ class CycleControl(QtCore.QThread):
         self.stop_button = self.main_window.cycle_stop_button
 
         # ########## Class Variables ##########
+        self.cycle_is_running = False
 
         # ########## Make signal/slot connections ##########
         self.connect_signals_to_slots()
 
         # ########## Set labels to defaults ##########
         self.set_labels_to_defaults()
+
+    def connect_signals_to_slots(self):
+        self.start_button.clicked.connect(self.on_start_button_pressed_slot)
+        self.pause_resume_button.clicked.connect(self.on_pause_resume_button_pressed_slot)
+        self.stop_button.clicked.connect(self.on_stop_button_pressed_slot)
+        self.stop_button.clicked.connect(self.on_stop_button_pressed_slot)
+
+        self.start_cycle_signal.connect(self.main_window.cycle_handler.on_cycle_start_pressed_slot)
+        self.stop_cycle_signal.connect(self.main_window.cycle_handler.on_cycle_stop_pressed_slot)
+        self.pause_cycle_signal.connect(self.main_window.cycle_handler.on_cycle_pause_pressed_slot)
+        self.resume_cycle_signal.connect(self.main_window.cycle_handler.on_cycle_resume_pressed_slot)
+
 
     def set_labels_to_defaults(self):
         self.cycle_mon_label
@@ -112,5 +130,24 @@ class CycleControl(QtCore.QThread):
         self.time_remaining_label.setText("N/A")
         self.success_rate_label.setText("N/A")
 
-    def connect_signals_to_slots(self):
-        pass
+    def on_start_button_pressed_slot(self):
+        self.set_labels_to_defaults()
+        self.cycle_is_running = True
+        self.start_button.setEnabled(False)
+        self.start_cycle_signal.emit()
+
+    def on_pause_resume_button_pressed_slot(self):
+        if self.cycle_is_running:
+            if self.pause_resume_button.text() == "Pause":
+                self.pause_resume_button.setText("Resume")
+                self.pause_cycle_signal.emit()
+            else:
+                self.pause_resume_button.setText("Pause")
+                self.resume_cycle_signal.emit()
+
+    def on_stop_button_pressed_slot(self):
+        if self.cycle_is_running:
+            self.cycle_is_running = False
+            self.pause_resume_button.setText("Pause")
+            self.start_button.setEnabled(True)
+            self.stop_cycle_signal.emit()
