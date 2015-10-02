@@ -133,6 +133,7 @@ class CycleControl(QtCore.QThread):
     def on_start_button_pressed_slot(self):
         self.set_labels_to_defaults()
         self.cycle_is_running = True
+        self.master.cycle_running = True
         self.start_button.setEnabled(False)
         self.start_cycle_signal.emit()
 
@@ -150,4 +151,5 @@ class CycleControl(QtCore.QThread):
             self.cycle_is_running = False
             self.pause_resume_button.setText("Pause")
             self.start_button.setEnabled(True)
+            self.master.cycle_running = False
             self.stop_cycle_signal.emit()

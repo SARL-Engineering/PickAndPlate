@@ -64,6 +64,7 @@ class PickAndPlateInterface(QtCore.QObject):
 
         # ########## Class variables ##########
         self.last_tab_index = 0
+        self.cycle_running = False
 
         # ########## Instantiations of status class ##########
         self.status = Status(self.main_window, self)
@@ -91,7 +92,10 @@ class PickAndPlateInterface(QtCore.QObject):
         # This event handler makes sure you can't click on the time / id number tab
         # There was no nice way to overlay widgets without nasty code, so I opted for this instead.
         # Still not very nice, but not the worst either
-        if index == 4:
+
+        if self.cycle_running:
+            self.main_tab_widget.setCurrentIndex(0)
+        elif index == 4:
             self.main_tab_widget.setCurrentIndex(self.last_tab_index)
         else:
             self.last_tab_index = index

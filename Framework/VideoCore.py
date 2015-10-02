@@ -396,7 +396,8 @@ class PickAndPlateVideo(QtCore.QThread):
         output_frame = cv2.drawKeypoints(overlay_frame, keypoints, color=(255, 0, 0))
         return output_frame
 
-    def convert_to_qimage(self, input_matrix):
+    @staticmethod
+    def convert_to_qimage(input_matrix):
         return qimage2ndarray.array2qimage(input_matrix)
 
     def crop_image(self, input_matrix):
