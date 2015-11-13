@@ -111,6 +111,8 @@ class CycleControl(QtCore.QThread):
         self.pause_cycle_signal.connect(self.main_window.cycle_handler.on_cycle_pause_pressed_slot)
         self.resume_cycle_signal.connect(self.main_window.cycle_handler.on_cycle_resume_pressed_slot)
 
+        self.start_cycle_signal.connect(self.main_window.controller.on_start_cycle_pressed_slot)
+        self.pause_cycle_signal.connect(self.main_window.controller.on_stop_cycle_button_pressed_slot)
 
     def set_labels_to_defaults(self):
         self.cycle_mon_label

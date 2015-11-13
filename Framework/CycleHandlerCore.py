@@ -71,7 +71,7 @@ class PickAndPlateCycleHandler(QtCore.QThread):
         self.connect_signals_to_slots()
 
         # ########## Start timer ##########
-        self.start()
+        # FIXME: REMOVE THIS FIXME self.start()
 
     def connect_signals_to_slots(self):
         pass
