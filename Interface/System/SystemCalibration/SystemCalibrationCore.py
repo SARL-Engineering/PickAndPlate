@@ -48,6 +48,12 @@ class SystemCalibration(QtCore.QObject):
 
     camera_focus_exposure_changed_signal = QtCore.pyqtSignal(int, int)
 
+    system_location_request_signal = QtCore.pyqtSignal()
+    full_system_home_request_signal = QtCore.pyqtSignal()
+    x_y_move_relative_request_signal = QtCore.pyqtSignal(float, float)
+    z_move_request_signal = QtCore.pyqtSignal(float)
+    light_change_signal = QtCore.pyqtSignal(int)
+
     def __init__(self, main_window, master):
         QtCore.QObject.__init__(self)
 
@@ -80,11 +86,13 @@ class SystemCalibration(QtCore.QObject):
         self.x_right_button = self.main_window.alignment_x_right_button
         self.y_up_button = self.main_window.alignment_y_up_button
         self.y_down_button = self.main_window.alignment_y_down_button
-        self.center_button = self.main_window.alignment_center_button
+        self.triple_zero_button = self.main_window.alignment_triple_zero_button
         self.z_up_button = self.main_window.alignment_z_up_button
         self.z_down_button = self.main_window.alignment_z_down_button
         self.z_max_button = self.main_window.alignment_z_max_button
 
+        self.full_home_button = self.main_window.alignment_full_home_button
+        self.save_z_center_button = self.main_window.alignment_save_precision_z_button
         self.save_dish_button = self.main_window.alignment_save_dish_button
         self.save_a1_button = self.main_window.alignment_save_a1_button
         self.save_waste_button = self.main_window.alignment_save_waste_button
@@ -93,6 +101,14 @@ class SystemCalibration(QtCore.QObject):
         self.lights_off_button = self.main_window.alignment_lights_off_button
 
         self.cal_preview_button = self.main_window.system_calibration_image_preview_button
+
+        # ########## Local Class Variables ##########
+        self.request_complete = False
+
+        self.tinyg_z_location = None
+        self.tinyg_x_location = None
+        self.tinyg_y_location = None
+
 
         # ########## Set up gui elements ##########
         self.toolbox.setCurrentIndex(0)
@@ -104,6 +120,7 @@ class SystemCalibration(QtCore.QObject):
         self.connect_signals_to_slots()
 
     def connect_signals_to_slots(self):
+        # ########## Local interface and settings connections ##########
         self.crop_x_center_sb.valueChanged.connect(self.save_non_pick_head_changed_values_to_settings_slot)
         self.crop_y_center_sb.valueChanged.connect(self.save_non_pick_head_changed_values_to_settings_slot)
 
@@ -117,6 +134,24 @@ class SystemCalibration(QtCore.QObject):
 
         self.apply_focus_exposure_button.clicked.connect(self.on_focus_or_exposure_changed_slot)
         self.camera_focus_exposure_changed_signal.connect(self.main_window.video.configure_v4l2_camera_settings_slot)
+
+        self.x_right_button.clicked.connect(self.on_x_positive_clicked_slot)
+        self.x_left_button.clicked.connect(self.on_x_negative_clicked_slot)
+        self.y_up_button.clicked.connect(self.on_y_positive_clicked_slot)
+        self.y_down_button.clicked.connect(self.on_y_negative_clicked_slot)
+        self.z_up_button.clicked.connect(self.on_z_positive_clicked_slot)
+        self.z_down_button.clicked.connect(self.on_z_negative_clicked_slot)
+
+        self.triple_zero_button.clicked.connect(self.on_x_y_z_zero_clicked_slot)
+        self.z_max_button.clicked.connect(self.on_z_max_clicked_slot)
+
+        # ########## External connections ##########
+        self.system_location_request_signal.connect(self.main_window.controller.broadcast_location_slot)
+        self.main_window.controller.tinyg_location_update_signal.connect(self.on_system_location_changed_slot)
+
+        self.x_y_move_relative_request_signal.connect(
+            self.main_window.controller.on_x_y_axis_move_relative_requested_slot)
+
 
     def save_non_pick_head_changed_values_to_settings_slot(self):
         self.settings.setValue("system/system_calibration/crop_x_center", self.crop_x_center_sb.value())
@@ -140,6 +175,57 @@ class SystemCalibration(QtCore.QObject):
         self.distance_cal_y_sb.setValue(self.settings.value("system/system_calibration/distance_cal_y").toInt()[0])
         self.usable_area_offset_sb.setValue(self.settings.value("system/system_calibration/usable_area_offset")
                                             .toInt()[0])
+
+    def on_x_positive_clicked_slot(self):
+        self.request_complete = False
+        resolution = float(self.res_combo_box.currentText())
+        self.x_y_move_relative_request_signal.emit(resolution, 0)
+
+        while not self.request_complete:
+            pass
+
+    def on_x_negative_clicked_slot(self):
+        self.request_complete = False
+        resolution = float(self.res_combo_box.currentText())
+        self.x_y_move_relative_request_signal.emit(-resolution, 0)
+
+        while not self.request_complete:
+            pass
+
+    def on_y_positive_clicked_slot(self):
+        self.request_complete = False
+        resolution = float(self.res_combo_box.currentText())
+        self.x_y_move_relative_request_signal.emit(0, resolution)
+
+        while not self.request_complete:
+            pass
+
+    def on_y_negative_clicked_slot(self):
+        self.request_complete = False
+        resolution = float(self.res_combo_box.currentText())
+        self.x_y_move_relative_request_signal.emit(0, -resolution)
+
+        while not self.request_complete:
+            pass
+
+    def on_z_positive_clicked_slot(self):
+        pass
+
+    def on_z_negative_clicked_slot(self):
+        pass
+
+    def on_x_y_z_zero_clicked_slot(self):
+        pass
+
+    def on_z_max_clicked_slot(self):
+        pass
+
+    def on_system_location_changed_slot(self, x, y, z, a):
+        self.tinyg_x_location = x
+        self.tinyg_y_location = y
+        self.tinyg_z_location = z
+
+        self.request_complete = True
 
     def on_focus_or_exposure_changed_slot(self):
         self.camera_focus_exposure_changed_signal.emit(self.camera_focus_sb.value(), self.camera_exposure_sb.value())
