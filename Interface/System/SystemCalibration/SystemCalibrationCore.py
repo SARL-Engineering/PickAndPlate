@@ -51,6 +51,7 @@ class SystemCalibration(QtCore.QObject):
     system_location_request_signal = QtCore.pyqtSignal()
     full_system_home_request_signal = QtCore.pyqtSignal()
     x_y_move_relative_request_signal = QtCore.pyqtSignal(float, float)
+    x_y_move_request_signal = QtCore.pyqtSignal(float, float)
     z_move_request_signal = QtCore.pyqtSignal(float)
     light_change_signal = QtCore.pyqtSignal(int)
 
@@ -103,7 +104,7 @@ class SystemCalibration(QtCore.QObject):
         self.cal_preview_button = self.main_window.system_calibration_image_preview_button
 
         # ########## Local Class Variables ##########
-        self.request_complete = False
+        self.request_complete = True
 
         self.tinyg_z_location = None
         self.tinyg_x_location = None
@@ -145,12 +146,18 @@ class SystemCalibration(QtCore.QObject):
         self.triple_zero_button.clicked.connect(self.on_x_y_z_zero_clicked_slot)
         self.z_max_button.clicked.connect(self.on_z_max_clicked_slot)
 
+        self.save_z_center_button.clicked.connect(self.on_save_precision_z_center_clicked_slot)
+
         # ########## External connections ##########
         self.system_location_request_signal.connect(self.main_window.controller.broadcast_location_slot)
         self.main_window.controller.tinyg_location_update_signal.connect(self.on_system_location_changed_slot)
 
         self.x_y_move_relative_request_signal.connect(
             self.main_window.controller.on_x_y_axis_move_relative_requested_slot)
+        self.x_y_move_request_signal.connect(self.main_window.controller.on_x_y_axis_move_requested_slot)
+        self.z_move_request_signal.connect(self.main_window.controller.on_z_axis_move_requested_slot)
+
+        self.full_home_button.clicked.connect(self.main_window.controller.on_full_system_homing_requested_slot)
 
 
     def save_non_pick_head_changed_values_to_settings_slot(self):
@@ -177,36 +184,29 @@ class SystemCalibration(QtCore.QObject):
                                             .toInt()[0])
 
     def on_x_positive_clicked_slot(self):
-        self.request_complete = False
-        resolution = float(self.res_combo_box.currentText())
-        self.x_y_move_relative_request_signal.emit(resolution, 0)
-
-        while not self.request_complete:
-            pass
+        if self.request_complete:
+            self.request_complete = False
+            resolution = float(self.res_combo_box.currentText())
+            self.x_y_move_relative_request_signal.emit(resolution, 0)
 
     def on_x_negative_clicked_slot(self):
-        self.request_complete = False
-        resolution = float(self.res_combo_box.currentText())
-        self.x_y_move_relative_request_signal.emit(-resolution, 0)
-
-        while not self.request_complete:
-            pass
+        if self.request_complete:
+            self.request_complete = False
+            resolution = float(self.res_combo_box.currentText())
+            self.x_y_move_relative_request_signal.emit(-resolution, 0)
 
     def on_y_positive_clicked_slot(self):
-        self.request_complete = False
-        resolution = float(self.res_combo_box.currentText())
-        self.x_y_move_relative_request_signal.emit(0, resolution)
+        if self.request_complete:
+            self.request_complete = False
+            resolution = float(self.res_combo_box.currentText())
+            self.x_y_move_relative_request_signal.emit(0, resolution)
 
-        while not self.request_complete:
-            pass
 
     def on_y_negative_clicked_slot(self):
-        self.request_complete = False
-        resolution = float(self.res_combo_box.currentText())
-        self.x_y_move_relative_request_signal.emit(0, -resolution)
-
-        while not self.request_complete:
-            pass
+        if self.request_complete:
+            self.request_complete = False
+            resolution = float(self.res_combo_box.currentText())
+            self.x_y_move_relative_request_signal.emit(0, -resolution)
 
     def on_z_positive_clicked_slot(self):
         pass
@@ -215,9 +215,27 @@ class SystemCalibration(QtCore.QObject):
         pass
 
     def on_x_y_z_zero_clicked_slot(self):
-        pass
+        if self.request_complete:
+            self.x_y_move_request_signal.emit(0 ,0)
+            self.z_move_request_signal.emit(0)
 
     def on_z_max_clicked_slot(self):
+        pass
+
+    def on_do_full_homing_clicked_slot(self):
+        pass
+
+    def on_save_precision_z_center_clicked_slot(self):
+        self.settings.setValue("system/system_calibration/precision_z_x_center", self.tinyg_x_location)
+        self.settings.setValue("system/system_calibration/precision_z_y_center", self.tinyg_y_location)
+
+    def on_save_dish_center_clicked_slot(self):
+        pass
+
+    def on_save_a1_center_clicked_slot(self):
+        pass
+
+    def on_save_waste_center_clicked_slot(self):
         pass
 
     def on_system_location_changed_slot(self, x, y, z, a):
