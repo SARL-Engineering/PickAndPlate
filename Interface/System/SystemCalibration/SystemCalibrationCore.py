@@ -154,6 +154,8 @@ class SystemCalibration(QtCore.QObject):
         self.save_waste_button.clicked.connect(self.on_save_waste_center_clicked_slot)
 
         self.full_home_button.clicked.connect(self.on_do_full_homing_clicked_slot)
+        self.lights_on_button.clicked.connect(self.on_lights_on_clicked_slot)
+        self.lights_off_button.clicked.connect(self.on_lights_off_clicked_slot)
 
         # ########## External connections ##########
         self.system_location_request_signal.connect(self.main_window.controller.broadcast_location_slot)
@@ -166,6 +168,7 @@ class SystemCalibration(QtCore.QObject):
         self.z_move_request_signal.connect(self.main_window.controller.on_z_axis_move_requested_slot)
 
         self.full_home_button.clicked.connect(self.main_window.controller.on_full_system_homing_requested_slot)
+        self.light_change_signal.connect(self.main_window.controller.on_light_change_request_signal_slot)
 
 
     def save_non_pick_head_changed_values_to_settings_slot(self):
@@ -192,50 +195,43 @@ class SystemCalibration(QtCore.QObject):
                                             .toInt()[0])
 
     def on_x_positive_clicked_slot(self):
-        if self.request_complete:
-            self.request_complete = False
-            resolution = float(self.res_combo_box.currentText())
-            self.x_y_move_relative_request_signal.emit(resolution, 0)
+        self.request_complete = False
+        resolution = float(self.res_combo_box.currentText())
+        self.x_y_move_relative_request_signal.emit(resolution, 0)
 
     def on_x_negative_clicked_slot(self):
-        if self.request_complete:
-            self.request_complete = False
-            resolution = float(self.res_combo_box.currentText())
-            self.x_y_move_relative_request_signal.emit(-resolution, 0)
+        self.request_complete = False
+        resolution = float(self.res_combo_box.currentText())
+        self.x_y_move_relative_request_signal.emit(-resolution, 0)
 
     def on_y_positive_clicked_slot(self):
-        if self.request_complete:
-            self.request_complete = False
-            resolution = float(self.res_combo_box.currentText())
-            self.x_y_move_relative_request_signal.emit(0, resolution)
+        self.request_complete = False
+        resolution = float(self.res_combo_box.currentText())
+        self.x_y_move_relative_request_signal.emit(0, resolution)
 
 
     def on_y_negative_clicked_slot(self):
-        if self.request_complete:
-            self.request_complete = False
-            resolution = float(self.res_combo_box.currentText())
-            self.x_y_move_relative_request_signal.emit(0, -resolution)
+        self.request_complete = False
+        resolution = float(self.res_combo_box.currentText())
+        self.x_y_move_relative_request_signal.emit(0, -resolution)
 
     def on_z_positive_clicked_slot(self):
-        if self.request_complete:
-            self.request_complete = False
-            resolution = float(self.res_combo_box.currentText())
-            self.z_move_relative_request_signal.emit(resolution)
+        self.request_complete = False
+        resolution = float(self.res_combo_box.currentText())
+        self.z_move_relative_request_signal.emit(resolution)
 
     def on_z_negative_clicked_slot(self):
-        if self.request_complete:
-            self.request_complete = False
-            resolution = float(self.res_combo_box.currentText())
-            self.z_move_relative_request_signal.emit(-resolution)
+        self.request_complete = False
+        resolution = float(self.res_combo_box.currentText())
+        self.z_move_relative_request_signal.emit(-resolution)
 
     def on_x_y_z_zero_clicked_slot(self):
-        if self.request_complete:
-            self.z_move_request_signal.emit(29)
-            self.x_y_move_request_signal.emit(0 ,0)
-            self.z_move_request_signal.emit(0)
+        self.z_move_request_signal.emit(29)
+        self.x_y_move_request_signal.emit(0 ,0)
+        self.z_move_request_signal.emit(0)
 
     def on_z_max_clicked_slot(self):
-        if self.request_complete and self.tinyg_full_home_done:
+        if self.tinyg_full_home_done:
             self.request_complete = False
             self.z_move_request_signal.emit(29)
 
@@ -262,13 +258,15 @@ class SystemCalibration(QtCore.QObject):
         self.settings.setValue("system/system_calibration/a1_y_center", self.tinyg_y_location)
         self.logger.debug("Waste Center Saved")
 
+    def on_lights_on_clicked_slot(self):
+        self.light_change_signal.emit(500)
+
+    def on_lights_off_clicked_slot(self):
+        self.light_change_signal.emit(0)
+
     def on_system_location_changed_slot(self, x, y, z, a):
         self.tinyg_x_location = x
         self.tinyg_y_location = y
-        self.tinyg_z_location = z
-
-        self.request_complete = True
-        # self.logger.info("X: " + str(x) + "\tY: " + str(y) + "\tZ: " + str(z))
 
     def on_focus_or_exposure_changed_slot(self):
         self.camera_focus_exposure_changed_signal.emit(self.camera_focus_sb.value(), self.camera_exposure_sb.value())
