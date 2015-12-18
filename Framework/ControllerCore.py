@@ -399,7 +399,7 @@ class PickAndPlateController(QtCore.QThread):
 
         self.tinyg_command_processed = False
 
-        self.control_queue = []
+        self.command_queue = []
 
         # ########## Make signal/slot connections ##########
         self.connect_signals_to_slots()
@@ -430,61 +430,89 @@ class PickAndPlateController(QtCore.QThread):
         while not self.tinyg_machine_state == INITIALIZING_STATE:
             self.msleep(250)
 
+        self.command_queue.append({'Command':'System Initialization'})
         self.msleep(1500)
 
         while self.not_abort_flag:
-            if self.system_init_flag:
-                self.run_system_init_slot()
-                self.system_init_flag = False
 
-            elif self.tinyg_initial_home_requested_flag:
-                self.initial_system_homing_request()
-                self.tinyg_initial_home_requested_flag = False
+            if self.command_queue:
+                current_command = self.command_queue[0]
+                self.logger.debug("Command Queue: " + str(self.command_queue))
+                del self.command_queue[0]
 
-            elif self.tinyg_full_home_requested_flag:
-                self.full_system_homing_request()
-                self.tinyg_full_home_requested_flag = False
+                if current_command['Command'] == 'System Initialization':
+                    self.initial_system_homing_request()
+                if current_command['Command'] == 'Initial Homing':
+                    self.initial_system_homing_request()
+                elif current_command['Command'] == 'Full Homing':
+                    self.full_system_homing_request()
+                elif current_command['Command'] == 'Z Move ABS':
+                    self.z_axis_move_request(current_command['Z'])
+                elif current_command['Command'] == 'Z Move REL':
+                    self.z_axis_move_relative_request(current_command['Z'])
+                elif current_command['Command'] == 'Z Home':
+                    self.z_home_request(current_command['Type'])
+                elif current_command['Command'] == 'X/Y Move ABS':
+                    self.x_y_move_request(current_command['X'], current_command['Y'])
+                elif current_command['Command'] == 'X/Y Move REL':
+                    self.x_y_move_relative_request(current_command['X'], current_command['Y'])
+                elif current_command['Command'] == 'X/Y Home':
+                    self.x_y_home_request()
+                elif current_command['Command'] == 'X/Y Precision Home':
+                    self.x_y_axis_precision_home_request()
+                elif current_command['Command'] == 'A Move REL':
+                    self.a_axis_move_request()
+                elif current_command['Command'] == 'A Home':
+                    self.a_axis_home_request()
 
-            elif self.tinyg_a_axis_home_requested_flag:
-                self.a_axis_home_request()
-                self.tinyg_a_axis_home_requested_flag = False
-
-            elif self.tinyg_z_axis_home_requested_flag:
-                self.z_home_request(self.tinyg_z_axis_home_type)
-                self.tinyg_z_axis_home_requested_flag = False
-
-            elif self.tinyg_x_y_axis_precision_home_flag:
-
-                self.tinyg_x_y_axis_precision_home_flag = False
-
-            elif self.tinyg_x_y_axis_home_requested_flag:
-                self.x_y_home_request()
-                self.tinyg_x_y_axis_home_requested_flag = False
-
-            elif self.tinyg_light_change_requested_flag:
-                pass
-
-            elif self.tinyg_a_axis_move_requested_flag:
-                self.a_axis_move_request(self.tinyg_a_location_desired)
-                self.tinyg_a_axis_move_requested_flag = False
-
-            elif self.tinyg_z_axis_move_requested_flag:
-                self.z_axis_move_request(self.tinyg_z_location_desired)
-                self.tinyg_z_axis_move_requested_flag = False
-
-            elif self.tinyg_x_y_axis_move_requested_flag:
-                self.x_y_move_request(self.tinyg_x_location_desired, self.tinyg_y_location_desired)
-                self.tinyg_x_y_axis_move_requested_flag = False
-
-            self.msleep(50)
+            # if self.system_init_flag:
+            #     self.run_system_init_slot()
+            #     self.system_init_flag = False
+            #
+            # elif self.tinyg_initial_home_requested_flag:
+            #     self.initial_system_homing_request()
+            #     self.tinyg_initial_home_requested_flag = False
+            #
+            # elif self.tinyg_full_home_requested_flag:
+            #     self.full_system_homing_request()
+            #     self.tinyg_full_home_requested_flag = False
+            #
+            # elif self.tinyg_a_axis_home_requested_flag:
+            #     self.a_axis_home_request()
+            #     self.tinyg_a_axis_home_requested_flag = False
+            #
+            # elif self.tinyg_z_axis_home_requested_flag:
+            #     self.z_home_request(self.tinyg_z_axis_home_type)
+            #     self.tinyg_z_axis_home_requested_flag = False
+            #
+            # elif self.tinyg_x_y_axis_precision_home_flag:
+            #
+            #     self.tinyg_x_y_axis_precision_home_flag = False
+            #
+            # elif self.tinyg_x_y_axis_home_requested_flag:
+            #     self.x_y_home_request()
+            #     self.tinyg_x_y_axis_home_requested_flag = False
+            #
+            # elif self.tinyg_light_change_requested_flag:
+            #     pass
+            #
+            # elif self.tinyg_a_axis_move_requested_flag:
+            #     self.a_axis_move_request(self.tinyg_a_location_desired)
+            #     self.tinyg_a_axis_move_requested_flag = False
+            #
+            # elif self.tinyg_z_axis_move_requested_flag:
+            #     self.z_axis_move_request(self.tinyg_z_location_desired)
+            #     self.tinyg_z_axis_move_requested_flag = False
+            #
+            # elif self.tinyg_x_y_axis_move_requested_flag:
+            #     self.x_y_move_request(self.tinyg_x_location_desired, self.tinyg_y_location_desired)
+            #     self.tinyg_x_y_axis_move_requested_flag = False
+            else:
+                self.msleep(50)
 
         self.serial_handler.not_abort_flag = False
         self.serial_handler.wait()
         self.logger.debug("PickAndPlate Controller Thread Exiting...")
-
-
-    def run_system_init_slot(self):
-        self.initial_system_homing_request()
 
     def run_rough_homing_sequence_slot(self):
         pass
@@ -504,13 +532,14 @@ class PickAndPlateController(QtCore.QThread):
 
     ########## Methods for all axes ##########
     def initial_system_homing_request(self):
-        self.a_axis_home_request()
-        self.z_home_request(ROUGH)
-        self.x_y_move_relative_request(-20, -20)
-        self.x_y_home_request()
+        self.on_a_axis_home_requested_slot()
+        self.on_z_axis_homing_requested_slot(ROUGH)
+        self.on_x_y_axis_move_relative_requested_slot(-20, -20)
+        self.on_x_y_axes_homing_requested_slot()
         # self.tinyg_dump_settings_signal.emit()
 
     def on_initial_system_homing_requested_slot(self):
+        self.command_queue.append({'Command':'Initial Homing'})
         self.tinyg_initial_home_requested_flag = True
 
     def full_system_homing_request(self):
@@ -519,27 +548,30 @@ class PickAndPlateController(QtCore.QThread):
 
         self.initial_system_homing_request()
 
-        self.x_y_move_request(precision_z_x_center, precision_z_y_center)
-        self.z_axis_move_request(-22.5)
-        self.z_home_request(FINE)
-        self.x_y_axis_precision_home_request()
+        self.on_x_y_axis_move_requested_slot(precision_z_x_center, precision_z_y_center)
+        self.on_z_axis_move_requested_slot(-22.5)
+        self.on_z_axis_homing_requested_slot(FINE)
+        self.on_x_y_axis_precision_home_requested_slot()
         self.msleep(3500)
 
         while (self.tinyg_x_location != 0) or (self.tinyg_y_location != 0):
             self.x_y_move_request(0, 0)
 
-        self.z_axis_move_request(0)
+        self.on_z_axis_move_requested_slot(0)
 
     def on_full_system_homing_requested_slot(self):
+        self.command_queue.append({'Command':'Full Homing'})
         self.tinyg_full_home_requested_flag = True
 
 
     ########## Z Axis Methods ##########
     def on_z_axis_move_requested_slot(self, z):
+        self.command_queue.append({'Command':'Z Move ABS', 'Z':z})
         self.tinyg_z_location_desired = z
         self.tinyg_z_axis_move_requested_flag = True
 
     def on_z_axis_move_relative_requested_slot(self, z):
+        self.command_queue.append({'Command':'Z Move REL', 'Z':z})
         self.tinyg_z_location_desired = self.tinyg_z_location + z
         self.tinyg_z_axis_move_requested_flag = True
 
@@ -551,9 +583,15 @@ class PickAndPlateController(QtCore.QThread):
         while self.tinyg_machine_state == MOTION_RUNNING_STATE:
             self.msleep(50)
 
-        self.broadcast_location_slot()
+    def z_axis_move_relative_request(self, z):
+        self.tinyg_move_relative_signal.emit(0, 0, z, 0)
+
+        self.msleep(350)
+        while self.tinyg_machine_state == MOTION_RUNNING_STATE:
+            self.msleep(50)
 
     def on_z_axis_homing_requested_slot(self, homing_type):
+        self.command_queue.append({'Command':'Z Home', 'Type':homing_type})
         self.tinyg_z_axis_home_type = homing_type
         self.tinyg_z_axis_home_requested_flag = True
 
@@ -565,16 +603,17 @@ class PickAndPlateController(QtCore.QThread):
         while self.tinyg_machine_state == HOMING_STATE:
             self.msleep(50)
 
-        self.broadcast_location_slot()
         self.msleep(1000)
 
     ########## X Y Axis Methods ##########
     def on_x_y_axis_move_requested_slot(self, x, y):
+        self.command_queue.append({'Command':'X/Y Move ABS', 'X':x, 'Y':y})
         self.tinyg_x_location_desired = x
         self.tinyg_y_location_desired = y
         self.tinyg_x_y_axis_move_requested_flag = True
 
     def on_x_y_axis_move_relative_requested_slot(self, x, y):
+        self.command_queue.append({'Command':'X/Y Move REL', 'X':x, 'Y':y})
         self.tinyg_x_location_desired = self.tinyg_x_location + x
         self.tinyg_y_location_desired = self.tinyg_y_location + y
         self.tinyg_x_y_axis_move_requested_flag = True
@@ -590,8 +629,6 @@ class PickAndPlateController(QtCore.QThread):
         while self.tinyg_machine_state == MOTION_RUNNING_STATE:
             self.msleep(50)
 
-        self.broadcast_location_slot()
-
     def x_y_move_relative_request(self, x, y):
         self.tinyg_move_relative_signal.emit(x, y, 0, 0)
 
@@ -600,10 +637,9 @@ class PickAndPlateController(QtCore.QThread):
             # self.logger.debug("X Y Home Waiting...")
             self.msleep(50)
 
-        self.broadcast_location_slot()
-
 
     def on_x_y_axes_homing_requested_slot(self):
+        self.command_queue.append({'Command':'X/Y Home'})
         self.tinyg_x_y_axis_home_requested_flag = True
 
     def x_y_home_request(self):
@@ -614,8 +650,10 @@ class PickAndPlateController(QtCore.QThread):
         while self.tinyg_machine_state == HOMING_STATE:
             self.msleep(50)
 
-        self.broadcast_location_slot()
         self.msleep(1000)
+
+    def on_x_y_axis_precision_home_requested_slot(self):
+        self.command_queue.append({'Command':'X/Y Precision Home'})
 
     def x_y_axis_precision_home_request(self):
         self.tinyg_x_y_precision_home_signal.emit()
@@ -625,11 +663,11 @@ class PickAndPlateController(QtCore.QThread):
         while self.tinyg_machine_state == HOMING_STATE:
             self.msleep(50)
 
-        self.broadcast_location_slot()
         self.msleep(1000)
 
     ########## A Axis Methods ##########
     def on_a_axis_move_requested_slot(self, microliters):
+        self.command_queue.append({'Command':'A Move REL', 'uL':microliters})
         self.tinyg_a_location_desired = microliters
         self.tinyg_a_axis_move_requested_flag = True
 
@@ -644,9 +682,9 @@ class PickAndPlateController(QtCore.QThread):
         while self.tinyg_machine_state == MOTION_RUNNING_STATE:
             self.msleep(50)
 
-        self.broadcast_location_slot()
 
     def on_a_axis_home_requested_slot(self):
+        self.command_queue.append({'Command':'A Home'})
         self.tinyg_a_axis_home_requested_flag = True
 
     def a_axis_home_request(self):
@@ -657,7 +695,6 @@ class PickAndPlateController(QtCore.QThread):
         while self.tinyg_machine_state == HOMING_STATE:
             self.msleep(50)
 
-        self.broadcast_location_slot()
         self.msleep(1000)
 
     def on_stop_cycle_button_pressed_slot(self):
@@ -669,6 +706,8 @@ class PickAndPlateController(QtCore.QThread):
         self.tinyg_y_location = y
         self.tinyg_z_location = z
         self.tinyg_a_location = a
+
+        self.broadcast_location_slot()
 
     def on_tinyg_machine_state_changed_slot(self, state):
         self.tinyg_machine_state = state
