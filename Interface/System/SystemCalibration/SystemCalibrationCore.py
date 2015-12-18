@@ -52,6 +52,7 @@ class SystemCalibration(QtCore.QObject):
     full_system_home_request_signal = QtCore.pyqtSignal()
     x_y_move_relative_request_signal = QtCore.pyqtSignal(float, float)
     x_y_move_request_signal = QtCore.pyqtSignal(float, float)
+    z_move_relative_request_signal = QtCore.pyqtSignal(float)
     z_move_request_signal = QtCore.pyqtSignal(float)
     light_change_signal = QtCore.pyqtSignal(int)
 
@@ -110,6 +111,7 @@ class SystemCalibration(QtCore.QObject):
         self.tinyg_x_location = None
         self.tinyg_y_location = None
 
+        self.tinyg_full_home_done = False
 
         # ########## Set up gui elements ##########
         self.toolbox.setCurrentIndex(0)
@@ -147,6 +149,11 @@ class SystemCalibration(QtCore.QObject):
         self.z_max_button.clicked.connect(self.on_z_max_clicked_slot)
 
         self.save_z_center_button.clicked.connect(self.on_save_precision_z_center_clicked_slot)
+        self.save_dish_button.clicked.connect(self.on_save_dish_center_clicked_slot)
+        self.save_a1_button.clicked.connect(self.on_save_a1_center_clicked_slot)
+        self.save_waste_button.clicked.connect(self.on_save_waste_center_clicked_slot)
+
+        self.full_home_button.clicked.connect(self.on_do_full_homing_clicked_slot)
 
         # ########## External connections ##########
         self.system_location_request_signal.connect(self.main_window.controller.broadcast_location_slot)
@@ -155,6 +162,7 @@ class SystemCalibration(QtCore.QObject):
         self.x_y_move_relative_request_signal.connect(
             self.main_window.controller.on_x_y_axis_move_relative_requested_slot)
         self.x_y_move_request_signal.connect(self.main_window.controller.on_x_y_axis_move_requested_slot)
+        self.z_move_relative_request_signal.connect(self.main_window.controller.on_z_axis_move_relative_requested_slot)
         self.z_move_request_signal.connect(self.main_window.controller.on_z_axis_move_requested_slot)
 
         self.full_home_button.clicked.connect(self.main_window.controller.on_full_system_homing_requested_slot)
@@ -209,34 +217,50 @@ class SystemCalibration(QtCore.QObject):
             self.x_y_move_relative_request_signal.emit(0, -resolution)
 
     def on_z_positive_clicked_slot(self):
-        pass
+        if self.request_complete:
+            self.request_complete = False
+            resolution = float(self.res_combo_box.currentText())
+            self.z_move_relative_request_signal.emit(resolution)
 
     def on_z_negative_clicked_slot(self):
-        pass
+        if self.request_complete:
+            self.request_complete = False
+            resolution = float(self.res_combo_box.currentText())
+            self.z_move_relative_request_signal.emit(-resolution)
 
     def on_x_y_z_zero_clicked_slot(self):
         if self.request_complete:
+            self.z_move_request_signal.emit(29)
             self.x_y_move_request_signal.emit(0 ,0)
             self.z_move_request_signal.emit(0)
 
     def on_z_max_clicked_slot(self):
-        pass
+        if self.request_complete and self.tinyg_full_home_done:
+            self.request_complete = False
+            self.z_move_request_signal.emit(29)
 
     def on_do_full_homing_clicked_slot(self):
-        pass
+        self.tinyg_full_home_done = True
 
     def on_save_precision_z_center_clicked_slot(self):
         self.settings.setValue("system/system_calibration/precision_z_x_center", self.tinyg_x_location)
         self.settings.setValue("system/system_calibration/precision_z_y_center", self.tinyg_y_location)
+        self.logger.debug("Precision Z Center Saved")
 
     def on_save_dish_center_clicked_slot(self):
-        pass
+        self.settings.setValue("system/system_calibration/dish_x_center", self.tinyg_x_location)
+        self.settings.setValue("system/system_calibration/dish_y_center", self.tinyg_y_location)
+        self.logger.debug("Dish Center Saved")
 
     def on_save_a1_center_clicked_slot(self):
-        pass
+        self.settings.setValue("system/system_calibration/a1_x_center", self.tinyg_x_location)
+        self.settings.setValue("system/system_calibration/a1_y_center", self.tinyg_y_location)
+        self.logger.debug("A1 Center Saved")
 
     def on_save_waste_center_clicked_slot(self):
-        pass
+        self.settings.setValue("system/system_calibration/a1_x_center", self.tinyg_x_location)
+        self.settings.setValue("system/system_calibration/a1_y_center", self.tinyg_y_location)
+        self.logger.debug("Waste Center Saved")
 
     def on_system_location_changed_slot(self, x, y, z, a):
         self.tinyg_x_location = x
@@ -244,6 +268,7 @@ class SystemCalibration(QtCore.QObject):
         self.tinyg_z_location = z
 
         self.request_complete = True
+        # self.logger.info("X: " + str(x) + "\tY: " + str(y) + "\tZ: " + str(z))
 
     def on_focus_or_exposure_changed_slot(self):
         self.camera_focus_exposure_changed_signal.emit(self.camera_focus_sb.value(), self.camera_exposure_sb.value())

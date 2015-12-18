@@ -93,6 +93,8 @@ MM_PER_UL = 0.1215
 #12.15mm per 100 microliter
 #0.1215mm per microliter
 
+IGNORE_VALUE = 1000
+
 #####################################
 # PickAndPlateController Definition
 #####################################
@@ -162,7 +164,7 @@ class SerialHandler(QtCore.QThread):
     def send_one_line_from_queue(self):
         if self.tinyg_serial_buffer_remaining > 10:
             self.serial.write(self.serial_out_queue[0])
-            self.logger.info("Command: " + str(self.serial_out_queue[0]))
+            # self.logger.info("Command: " + str(self.serial_out_queue[0]))
             del self.serial_out_queue[0]
 
     def read_from_tinyg(self):
@@ -206,7 +208,7 @@ class SerialHandler(QtCore.QThread):
             elif 'r' in processed_json:
                 self.tinyg_command_processed_signal.emit()
 
-            self.logger.info("Processed: " + str(processed_json))
+            # self.logger.info("Processed: " + str(processed_json))
         except:
             pass
 
@@ -280,19 +282,35 @@ class SerialHandler(QtCore.QThread):
 
     def on_absolute_position_change_requested_slot(self, x, y, z, a):
         out_string = 'G90 G0'
-        out_string += ' X' + str(x)
-        out_string += ' Y' + str(y)
-        out_string += ' Z' + str(z)
-        out_string += ' A' + str(a)
+
+        if x != IGNORE_VALUE:
+            out_string += ' X' + str(x)
+
+        if y != IGNORE_VALUE:
+            out_string += ' Y' + str(y)
+
+        if z != IGNORE_VALUE:
+            out_string += ' Z' + str(z)
+
+        if a != IGNORE_VALUE:
+            out_string += ' A' + str(a)
 
         self.serial_out_queue.append(self.convert_to_json({'gc': out_string}))
 
     def on_relative_position_change_requested_slot(self, x, y, z, a):
         out_string = 'G91 G0'
-        out_string += ' X' + str(x)
-        out_string += ' Y' + str(y)
-        out_string += ' Z' + str(z)
-        out_string += ' A' + str(a)
+
+        if x != 0:
+            out_string += ' X' + str(x)
+
+        if y != 0:
+            out_string += ' Y' + str(y)
+
+        if z != 0:
+            out_string += ' Z' + str(z)
+
+        if a != 0:
+            out_string += ' A' + str(a)
 
         self.serial_out_queue.append(self.convert_to_json({'gc': out_string}))
 
@@ -381,6 +399,7 @@ class PickAndPlateController(QtCore.QThread):
 
         self.tinyg_command_processed = False
 
+        self.control_queue = []
 
         # ########## Make signal/slot connections ##########
         self.connect_signals_to_slots()
@@ -505,7 +524,11 @@ class PickAndPlateController(QtCore.QThread):
         self.z_home_request(FINE)
         self.x_y_axis_precision_home_request()
         self.msleep(3500)
-        self.z_axis_move_request(-6.5)
+
+        while (self.tinyg_x_location != 0) or (self.tinyg_y_location != 0):
+            self.x_y_move_request(0, 0)
+
+        self.z_axis_move_request(0)
 
     def on_full_system_homing_requested_slot(self):
         self.tinyg_full_home_requested_flag = True
@@ -516,13 +539,13 @@ class PickAndPlateController(QtCore.QThread):
         self.tinyg_z_location_desired = z
         self.tinyg_z_axis_move_requested_flag = True
 
-    def z_axis_move_request(self, z):
-        current_a = self.tinyg_a_location
-        current_x = self.tinyg_x_location
-        current_y = self.tinyg_y_location
+    def on_z_axis_move_relative_requested_slot(self, z):
+        self.tinyg_z_location_desired = self.tinyg_z_location + z
+        self.tinyg_z_axis_move_requested_flag = True
 
+    def z_axis_move_request(self, z):
         self.tinyg_z_location_desired = z
-        self.tinyg_move_absolute_signal.emit(current_x, current_y, self.tinyg_z_location_desired, current_a)
+        self.tinyg_move_absolute_signal.emit(IGNORE_VALUE, IGNORE_VALUE, self.tinyg_z_location_desired, IGNORE_VALUE)
 
         self.msleep(350)
         while self.tinyg_machine_state == MOTION_RUNNING_STATE:
@@ -557,13 +580,11 @@ class PickAndPlateController(QtCore.QThread):
         self.tinyg_x_y_axis_move_requested_flag = True
 
     def x_y_move_request(self, x ,y):
-        current_a = self.tinyg_a_location
-        current_z = self.tinyg_z_location
         self.tinyg_x_location_desired = x
         self.tinyg_y_location_desired = y
 
-        self.tinyg_move_absolute_signal.emit(self.tinyg_x_location_desired, self.tinyg_y_location_desired, \
-                                             current_z, current_a)
+        self.tinyg_move_absolute_signal.emit(self.tinyg_x_location_desired, self.tinyg_y_location_desired,
+                                             IGNORE_VALUE, IGNORE_VALUE)
 
         self.msleep(350)
         while self.tinyg_machine_state == MOTION_RUNNING_STATE:
@@ -572,12 +593,6 @@ class PickAndPlateController(QtCore.QThread):
         self.broadcast_location_slot()
 
     def x_y_move_relative_request(self, x, y):
-        current_x = self.tinyg_x_location
-        current_y = self.tinyg_y_location
-
-        self.tinyg_x_location_desired = current_x + x
-        self.tinyg_y_location_desired = current_y + y
-
         self.tinyg_move_relative_signal.emit(x, y, 0, 0)
 
         self.msleep(350)
@@ -646,7 +661,7 @@ class PickAndPlateController(QtCore.QThread):
         self.msleep(1000)
 
     def on_stop_cycle_button_pressed_slot(self):
-        self.convert_to_json_and_send({'gc': 'M5'})
+        pass
 
     ########## Cross thread variable synchronization ##########
     def on_tinyg_location_changed_slot(self, x, y, z, a):
