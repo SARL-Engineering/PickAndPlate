@@ -44,6 +44,12 @@ import logging
 # PickAndPlateController Definition
 #####################################
 class PickAndPlateCycleHandler(QtCore.QThread):
+    full_system_home_request_signal = QtCore.pyqtSignal()
+    x_y_move_request_signal = QtCore.pyqtSignal(float, float)
+    z_move_request_signal = QtCore.pyqtSignal(float)
+    a_move_request_signal = QtCore.pyqtSignal(int)
+    light_change_signal = QtCore.pyqtSignal(int)
+
     def __init__(self, main_window):
         QtCore.QThread.__init__(self)
 
@@ -61,40 +67,88 @@ class PickAndPlateCycleHandler(QtCore.QThread):
         self.cycle_running_flag = False
 
         # ########## Class Variables ##########
-        self.do_cycle_init = False
         self.cycle_paused = False
-        self.pick_complete = False
 
-        self.image_ready = False
+        self.controller_command_complete = False
+        self.init_command_complete = False
+
+        self.tinyg_x_location = 0
+        self.tinyg_y_location = 0
+        self.tinyg_z_location = 0
+        self.tinyg_a_location = 0
 
         # ########## Make signal/slot connections ##########
         self.connect_signals_to_slots()
 
         # ########## Start timer ##########
-        # FIXME: REMOVE THIS FIXME self.start()
+        self.start()
 
     def connect_signals_to_slots(self):
-        pass
+        # CycleHandler to Controller
+        self.x_y_move_request_signal.connect(self.main_window.controller.on_x_y_axis_move_requested_slot)
+        self.z_move_request_signal.connect(self.main_window.controller.on_z_axis_move_requested_slot)
+        self.a_move_request_signal.connect(self.main_window.controller.on_a_axis_move_requested_slot)
+        self.full_system_home_request_signal.connect(self.main_window.controller.on_full_system_homing_requested_slot)
+        self.light_change_signal.connect(self.main_window.controller.on_light_change_request_signal_slot)
+
+        # Controller to Cycle Handler
+        self.main_window.controller.tinyg_location_update_signal.connect(self.on_system_location_changed_slot)
+        self.main_window.controller.controller_init_complete_signal.connect(self.on_init_command_completed_slot)
+        self.main_window.controller.controller_command_complete_signal.connect(
+                self.on_controller_command_completed_slot)
 
     def run(self):
         self.logger.debug("PickAndPlate Cycle Handler Thread Starting...")
         while self.not_abort_flag:
             if self.cycle_running_flag:
                 self.run_main_pick_and_plate_cycle()
+                self.cycle_running_flag = False
             else:
                 self.msleep(250)
 
         self.logger.debug("PickAndPlate Cycle Handler Thread Exiting...")
 
     def run_main_pick_and_plate_cycle(self):
-        if self.do_cycle_init:
-            self.reset_cycle_run_flags_and_variables()
-            # Run controller init for cycle run
-            # Set video controller to cycle mode
-            # Move controller to middle of dish, well A1, waste, and go back to home
-            # Retrieve initial image
-            while not self.image_ready:
-                self.msleep(100)
+        dish_x = self.settings.value("system/system_calibration/dish_x_center").toFloat()[0]
+        dish_y = self.settings.value("system/system_calibration/dish_y_center").toFloat()[0]
+        a1_x = self.settings.value("system/system_calibration/a1_x_center").toFloat()[0]
+        a1_y = self.settings.value("system/system_calibration/a1_y_center").toFloat()[0]
+        waste_x = self.settings.value("system/system_calibration/waste_x_center").toFloat()[0]
+        waste_y = self.settings.value("system/system_calibration/waste_y_center").toFloat()[0]
+
+        self.reset_cycle_run_flags_and_variables()
+
+        self.run_init()
+        self.set_lights(500)
+        self.move_z(29)
+
+        while self.cycle_running_flag:
+            self.move_x_y(dish_x, dish_y)
+            self.move_z(-10)
+            self.move_a(100)
+            self.move_z(29)
+
+            self.move_x_y(a1_x, a1_y)
+            self.move_z(-10)
+            self.move_a(-100)
+            self.move_z(29)
+
+            self.move_x_y(waste_x, waste_y)
+            self.move_z(-10)
+            self.move_a(-50)
+            self.move_a(50)
+            self.move_z(29)
+
+            self.msleep(2000)
+
+        self.set_lights(0)
+
+        # Run controller init for cycle run
+        # Set video controller to cycle mode
+        # Move controller to middle of dish, well A1, waste, and go back to home
+        # Retrieve initial image
+        # while not self.image_ready:
+        #     self.msleep(100)
 
 
         # Check if embryo's available for pick
@@ -109,19 +163,47 @@ class PickAndPlateCycleHandler(QtCore.QThread):
         # Pick up embryo
         # Move to desired well
 
-        self.image_ready = False
+        # self.image_ready = False
         # Emit signal to capture new image
 
         # Move to waste and expel
 
-        while (not self.image_ready) or self.cycle_paused:
-            self.msleep(100)
+        # while (not self.image_ready) or self.cycle_paused:
+        #     self.msleep(100)
 
         # Determine if embryo is gone or if double pick occurred and update statistics
 
+    def move_x_y(self, x, y):
+        self.controller_command_complete = False
+        self.x_y_move_request_signal.emit(x, y)
+        while not self.controller_command_complete:
+            self.msleep(50)
+
+    def move_z(self, z):
+        self.controller_command_complete = False
+        self.z_move_request_signal.emit(z)
+        while not self.controller_command_complete:
+            self.msleep(50)
+
+    def move_a(self, a):
+        self.controller_command_complete = False
+        self.a_move_request_signal.emit(a)
+        while not self.controller_command_complete:
+            self.msleep(50)
+
+    def set_lights(self, brightness):
+        self.controller_command_complete = False
+        self.light_change_signal.emit(brightness)
+        while not self.controller_command_complete:
+            self.msleep(50)
+
+    def run_init(self):
+        self.init_command_complete = False
+        self.full_system_home_request_signal.emit()
+        while not self.init_command_complete:
+            self.msleep(50)
 
     def on_cycle_start_pressed_slot(self):
-        self.do_cycle_init = True
         self.cycle_running_flag = True
 
     def on_cycle_pause_pressed_slot(self):
@@ -135,8 +217,18 @@ class PickAndPlateCycleHandler(QtCore.QThread):
 
     def reset_cycle_run_flags_and_variables(self):
         self.cycle_paused = False
-        self.pick_complete = True
-        self.image_ready = False
+
+    def on_controller_command_completed_slot(self):
+        self.controller_command_complete = True
+
+    def on_init_command_completed_slot(self):
+        self.init_command_complete = True
+
+    def on_system_location_changed_slot(self, x, y, z, a):
+        self.tinyg_x_location = x
+        self.tinyg_y_location = y
+        self.tinyg_z_location = z
+        self.tinyg_a_location = a
 
     def on_kill_threads_slot(self):
         self.not_abort_flag = False

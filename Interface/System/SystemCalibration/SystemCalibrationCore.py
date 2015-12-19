@@ -226,9 +226,10 @@ class SystemCalibration(QtCore.QObject):
         self.z_move_relative_request_signal.emit(-resolution)
 
     def on_x_y_z_zero_clicked_slot(self):
-        self.z_move_request_signal.emit(29)
-        self.x_y_move_request_signal.emit(0 ,0)
-        self.z_move_request_signal.emit(0)
+        if self.tinyg_full_home_done:
+            self.z_move_request_signal.emit(29)
+            self.x_y_move_request_signal.emit(0 ,0)
+            self.z_move_request_signal.emit(0)
 
     def on_z_max_clicked_slot(self):
         if self.tinyg_full_home_done:
@@ -254,8 +255,8 @@ class SystemCalibration(QtCore.QObject):
         self.logger.debug("A1 Center Saved")
 
     def on_save_waste_center_clicked_slot(self):
-        self.settings.setValue("system/system_calibration/a1_x_center", self.tinyg_x_location)
-        self.settings.setValue("system/system_calibration/a1_y_center", self.tinyg_y_location)
+        self.settings.setValue("system/system_calibration/waste_x_center", self.tinyg_x_location)
+        self.settings.setValue("system/system_calibration/waste_y_center", self.tinyg_y_location)
         self.logger.debug("Waste Center Saved")
 
     def on_lights_on_clicked_slot(self):

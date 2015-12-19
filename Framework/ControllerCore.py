@@ -225,7 +225,8 @@ class SerialHandler(QtCore.QThread):
 
     def reset_tinyg(self):
         self.serial_out_queue.append("^x\n")
-        # self.serial_out_queue.append(self.convert_to_json({'xzb':7.8325}))
+        # self.serial_out_queue.append(self.convert_to_json({'xvm':8000}))
+        # self.serial_out_queue.append(self.convert_to_json({'yvm':8000}))
         # self.serial_out_queue.append(self.convert_to_json({'zzb':6.5}))
         # self.serial_out_queue.append(self.convert_to_json({'zsv':50}))
 
@@ -343,7 +344,8 @@ class PickAndPlateController(QtCore.QThread):
     tinyg_dump_settings_signal = QtCore.pyqtSignal()
     tinyg_location_update_signal = QtCore.pyqtSignal(float, float, float, float)
 
-    requested_move_complete_signal = QtCore.pyqtSignal()
+    controller_command_complete_signal = QtCore.pyqtSignal()
+    controller_init_complete_signal = QtCore.pyqtSignal()
 
     def __init__(self, main_window):
         QtCore.QThread.__init__(self)
@@ -410,7 +412,7 @@ class PickAndPlateController(QtCore.QThread):
 
             if self.command_queue:
                 current_command = self.command_queue[0]
-                self.logger.debug("Command Queue: " + str(self.command_queue))
+                # self.logger.debug("Command Queue: " + str(self.command_queue))
                 del self.command_queue[0]
 
                 if current_command['Command'] == 'System Initialization':
@@ -434,7 +436,7 @@ class PickAndPlateController(QtCore.QThread):
                 elif current_command['Command'] == 'X/Y Precision Home':
                     self.x_y_axis_precision_home_request()
                 elif current_command['Command'] == 'A Move REL':
-                    self.a_axis_move_request()
+                    self.a_axis_move_request(current_command['uL'])
                 elif current_command['Command'] == 'A Home':
                     self.a_axis_home_request()
                 elif current_command['Command'] == 'Light Change':
@@ -457,10 +459,13 @@ class PickAndPlateController(QtCore.QThread):
         while not self.tinyg_command_processed:
             self.msleep(50)
 
+        self.controller_command_complete_signal.emit()
+
     ########## Methods for all axes ##########
     def initial_system_homing_request(self):
         self.on_light_change_request_signal_slot(500)
         self.on_a_axis_home_requested_slot()
+        self.on_a_axis_move_requested_slot(75)
         self.on_z_axis_homing_requested_slot(ROUGH)
         self.on_x_y_axis_move_relative_requested_slot(-20, -20)
         self.on_x_y_axes_homing_requested_slot()
@@ -489,6 +494,8 @@ class PickAndPlateController(QtCore.QThread):
         self.on_z_axis_move_requested_slot(0)
         self.on_light_change_request_signal_slot(0)
 
+        self.controller_init_complete_signal.emit()
+
     def on_full_system_homing_requested_slot(self):
         self.command_queue.append({'Command':'Full Homing'})
 
@@ -507,12 +514,16 @@ class PickAndPlateController(QtCore.QThread):
         while self.tinyg_machine_state == MOTION_RUNNING_STATE:
             self.msleep(50)
 
+        self.controller_command_complete_signal.emit()
+
     def z_axis_move_relative_request(self, z):
         self.tinyg_move_relative_signal.emit(0, 0, z, 0)
 
         self.msleep(350)
         while self.tinyg_machine_state == MOTION_RUNNING_STATE:
             self.msleep(50)
+
+        self.controller_command_complete_signal.emit()
 
     def on_z_axis_homing_requested_slot(self, homing_type):
         self.command_queue.append({'Command':'Z Home', 'Type':homing_type})
@@ -542,6 +553,8 @@ class PickAndPlateController(QtCore.QThread):
         while self.tinyg_machine_state == MOTION_RUNNING_STATE:
             self.msleep(50)
 
+        self.controller_command_complete_signal.emit()
+
     def x_y_move_relative_request(self, x, y):
         self.tinyg_move_relative_signal.emit(x, y, 0, 0)
 
@@ -549,6 +562,8 @@ class PickAndPlateController(QtCore.QThread):
         while self.tinyg_machine_state == MOTION_RUNNING_STATE:
             # self.logger.debug("X Y Home Waiting...")
             self.msleep(50)
+
+        self.controller_command_complete_signal.emit()
 
 
     def on_x_y_axes_homing_requested_slot(self):
@@ -589,6 +604,8 @@ class PickAndPlateController(QtCore.QThread):
         self.msleep(350)
         while self.tinyg_machine_state == MOTION_RUNNING_STATE:
             self.msleep(50)
+
+        self.controller_command_complete_signal.emit()
 
 
     def on_a_axis_home_requested_slot(self):
