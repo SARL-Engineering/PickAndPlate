@@ -37,6 +37,7 @@ import cv2
 import numpy
 import qimage2ndarray
 import subprocess
+from math import isnan
 
 # Custom imports
 
@@ -109,6 +110,7 @@ class PickAndPlateVideo(QtCore.QThread):
     CYCLE_RUN = "Cycle Run"
 
     requested_image_ready_signal = QtCore.pyqtSignal()
+    embryo_info_signal = QtCore.pyqtSignal(int, int, int)
     number_embryos_detected_signal = QtCore.pyqtSignal(int)
 
     def __init__(self, main_window):
@@ -129,6 +131,9 @@ class PickAndPlateVideo(QtCore.QThread):
         self.reconnect_to_camera_flag = True
         self.camera_connected_flag = False
 
+        self.setup_params_once = False
+        self.wait_for_image_req = True
+
         # ########## Class Variables ##########
         self.frame_grabber = None
 
@@ -140,7 +145,7 @@ class PickAndPlateVideo(QtCore.QThread):
         self.greyscale_frame = numpy.array([])
 
         self.settings_and_cal_qimage = None
-        self.cycle_preview_qimage = None
+        self.cycle_monitor_qimage = None
         self.last_pick_qimage = None
         self.current_pick_qimage = None
 
@@ -150,6 +155,18 @@ class PickAndPlateVideo(QtCore.QThread):
 
         self.images_displayed = False
         self.count = 0
+
+        self.current_params = cv2.SimpleBlobDetector_Params()
+        self.keypoints = None
+
+
+        self.min_thresh = 0
+        self.x_res = 0
+        self.y_res = 0
+        self.x_center = 0
+        self.y_center = 0
+        self.crop_dim_half = 0
+        self.usable_offset = 0
 
         # ########## Make signal/slot connections ##########
         self.connect_signals_to_slots()
@@ -162,7 +179,6 @@ class PickAndPlateVideo(QtCore.QThread):
 
     def run(self):
         self.logger.debug("PickAndPlate Video Thread Starting...")
-        # FIXME: WHY IS THIS HERE self.msleep(1500)
         while self.not_abort_flag:
             if self.reconnect_to_camera_flag:
                 self.reconnect_to_camera()
@@ -226,18 +242,21 @@ class PickAndPlateVideo(QtCore.QThread):
             self.frame_grabber.set_process_continuous()
             self.show_system_calibration()
         elif self.video_output_widget_name == self.CYCLE_RUN:
-            # Set single processing inside of cycle control loop
+            self.frame_grabber.set_process_continuous()
             self.show_cycle_run()
 
     def show_detection_calibration(self):
-        min_thresh = self.settings.value("system/detection_calibration/min_binary_thresh").toInt()[0]
+        if self.setup_params_once:
+            self.setup_blob_params()
+            self.setup_params_once = False
 
-        x_res = self.settings.value("system/system_settings/camera_res_width").toInt()[0]
-        y_res = self.settings.value("system/system_settings/camera_res_height").toInt()[0]
-        x_center = self.settings.value("system/system_calibration/crop_x_center").toInt()[0]
-        y_center = self.settings.value("system/system_calibration/crop_y_center").toInt()[0]
-        crop_dim_half = (self.settings.value("system/system_calibration/crop_dimension").toInt()[0] / 2)
-        usable_offset = self.settings.value("system/system_calibration/usable_area_offset").toInt()[0]
+            self.min_thresh = self.settings.value("system/detection_calibration/min_binary_thresh").toInt()[0]
+            self.x_res = self.settings.value("system/system_settings/camera_res_width").toInt()[0]
+            self.y_res = self.settings.value("system/system_settings/camera_res_height").toInt()[0]
+            self.x_center = self.settings.value("system/system_calibration/crop_x_center").toInt()[0]
+            self.y_center = self.settings.value("system/system_calibration/crop_y_center").toInt()[0]
+            self.crop_dim_half = (self.settings.value("system/system_calibration/crop_dimension").toInt()[0] / 2)
+            self.usable_offset = self.settings.value("system/system_calibration/usable_area_offset").toInt()[0]
 
 
         frame = numpy.array([])
@@ -253,24 +272,24 @@ class PickAndPlateVideo(QtCore.QThread):
 
         elif self.video_output_type == "Binary Threshold":
             frame = cv2.cvtColor(self.crop_image(self.raw_frame), cv2.COLOR_BGR2GRAY)
-            return_val, frame = cv2.threshold(frame, min_thresh, 255, cv2.THRESH_BINARY)
+            return_val, frame = cv2.threshold(frame, self.min_thresh, 255, cv2.THRESH_BINARY)
 
         elif self.video_output_type == "Masked Threshold":
             frame = cv2.cvtColor(self.raw_frame, cv2.COLOR_RGB2GRAY)
-            return_val, frame = cv2.threshold(frame, min_thresh, 255, cv2.cv.CV_THRESH_BINARY)
+            return_val, frame = cv2.threshold(frame, self.min_thresh, 255, cv2.cv.CV_THRESH_BINARY)
 
-            mask_frame = numpy.zeros((y_res, x_res), numpy.uint8)
-            cv2.circle(mask_frame, (x_center, y_center), (crop_dim_half - usable_offset), 255, -1)
+            mask_frame = numpy.zeros((self.y_res, self.x_res), numpy.uint8)
+            cv2.circle(mask_frame, (self.x_center, self.y_center), (self.crop_dim_half - self.usable_offset), 255, -1)
 
             frame = cv2.bitwise_and(frame, mask_frame)
             frame = self.crop_image(frame)
 
         elif self.video_output_type == "Detected Threshold":
             frame = cv2.cvtColor(self.raw_frame, cv2.COLOR_RGB2GRAY)
-            return_val, frame = cv2.threshold(frame, min_thresh, 255, cv2.cv.CV_THRESH_BINARY)
+            return_val, frame = cv2.threshold(frame, self.min_thresh, 255, cv2.cv.CV_THRESH_BINARY)
 
-            mask_frame = numpy.zeros((y_res, x_res), numpy.uint8)
-            cv2.circle(mask_frame, (x_center, y_center), (crop_dim_half - usable_offset), 255, -1)
+            mask_frame = numpy.zeros((self.y_res, self.x_res), numpy.uint8)
+            cv2.circle(mask_frame, (self.x_center, self.y_center), (self.crop_dim_half - self.usable_offset), 255, -1)
 
             frame = cv2.bitwise_and(frame, mask_frame)
 
@@ -279,10 +298,10 @@ class PickAndPlateVideo(QtCore.QThread):
             frame = self.crop_image(frame)
         elif self.video_output_type == "Original w/ Detected":
             frame = cv2.cvtColor(self.raw_frame, cv2.COLOR_RGB2GRAY)
-            return_val, frame = cv2.threshold(frame, min_thresh, 255, cv2.cv.CV_THRESH_BINARY)
+            return_val, frame = cv2.threshold(frame, self.min_thresh, 255, cv2.cv.CV_THRESH_BINARY)
 
-            mask_frame = numpy.zeros((y_res, x_res), numpy.uint8)
-            cv2.circle(mask_frame, (x_center, y_center), (crop_dim_half - usable_offset), 255, -1)
+            mask_frame = numpy.zeros((self.y_res, self.x_res), numpy.uint8)
+            cv2.circle(mask_frame, (self.x_center, self.y_center), (self.crop_dim_half - self.usable_offset), 255, -1)
 
             frame = cv2.bitwise_and(frame, mask_frame)
 
@@ -325,10 +344,58 @@ class PickAndPlateVideo(QtCore.QThread):
             self.logger.debug("failed to convert")
 
     def show_cycle_run(self):
-        pass
+        if self.setup_params_once:
+            self.setup_blob_params()
+            self.setup_params_once = False
+
+            self.min_thresh = self.settings.value("system/detection_calibration/min_binary_thresh").toInt()[0]
+            self.x_res = self.settings.value("system/system_settings/camera_res_width").toInt()[0]
+            self.y_res = self.settings.value("system/system_settings/camera_res_height").toInt()[0]
+            self.x_center = self.settings.value("system/system_calibration/crop_x_center").toInt()[0]
+            self.y_center = self.settings.value("system/system_calibration/crop_y_center").toInt()[0]
+            self.crop_dim_half = (self.settings.value("system/system_calibration/crop_dimension").toInt()[0] / 2)
+            self.usable_offset = self.settings.value("system/system_calibration/usable_area_offset").toInt()[0]
+
+        while self.wait_for_image_req:
+            self.msleep(100)
+        self.wait_for_image_req = True
+
+        frame = cv2.cvtColor(self.raw_frame, cv2.COLOR_RGB2GRAY)
+        return_val, frame = cv2.threshold(frame, self.min_thresh, 255, cv2.cv.CV_THRESH_BINARY)
+        mask_frame = numpy.zeros((self.y_res, self.x_res), numpy.uint8)
+        cv2.circle(mask_frame, (self.x_center, self.y_center), (self.crop_dim_half - self.usable_offset), 255, -1)
+        frame = cv2.bitwise_and(frame, mask_frame)
+        frame = self.masked_detect_and_overlay(frame, self.raw_frame)
+        frame = self.crop_image(frame)
+
+        # Determine which embryo to pick
+
+
+        try:
+            self.images_displayed = False
+            resized = cv2.resize(frame, (200, 200))
+
+            self.cycle_monitor_qimage = self.convert_to_qimage(resized)
+            self.requested_image_ready_signal.emit()
+
+            while not self.images_displayed:
+                self.msleep(5)
+        except:
+            self.logger.debug("failed to convert")
+
+
 
     def masked_detect_and_overlay(self, input_frame, overlay_frame):
-        #FIXME: This is for testing and needs to be implemented properly
+        detector = cv2.SimpleBlobDetector(self.current_params)
+        self.keypoints = detector.detect(input_frame)
+        self.number_embryos_detected_signal.emit(len(self.keypoints))
+        # if len(keypoints) > 0:
+        #     self.logger.debug("X: " + str(keypoints[0].pt[0]))
+        #     self.logger.debug("Y: " + str(keypoints[0].pt[1]))
+        output_frame = cv2.drawKeypoints(overlay_frame, self.keypoints, color=(255, 0, 0))
+        return output_frame
+
+    def setup_blob_params(self):
         min_blob_dist = self.settings.value("system/detection_calibration/min_blob_distance").toDouble()[0]
         min_repeat = self.settings.value("system/detection_calibration/min_repeat").toInt()[0]
         blob_thresh_min = self.settings.value("system/detection_calibration/blob_thresh_min").toInt()[0]
@@ -349,52 +416,46 @@ class PickAndPlateVideo(QtCore.QThread):
         blob_inertia_min = self.settings.value("system/detection_calibration/blob_inertia_min").toDouble()[0]
         blob_inertia_max = self.settings.value("system/detection_calibration/blob_inertia_max").toDouble()[0]
 
-        blob_params = cv2.SimpleBlobDetector_Params()
-        blob_params.minDistBetweenBlobs = min_blob_dist
-        blob_params.minRepeatability = min_repeat
-        blob_params.minThreshold = blob_thresh_min
-        blob_params.maxThreshold = blob_thresh_max
-        blob_params.thresholdStep = blob_thresh_step
+
+        self.current_params.minDistBetweenBlobs = min_blob_dist
+        self.current_params.minRepeatability = min_repeat
+        self.current_params.minThreshold = blob_thresh_min
+        self.current_params.maxThreshold = blob_thresh_max
+        self.current_params.thresholdStep = blob_thresh_step
 
         if blob_color_en:
-            blob_params.filterByColor = True
-            blob_params.blobColor = blob_color_val
+            self.current_params.filterByColor = True
+            self.current_params.blobColor = blob_color_val
         else:
-            blob_params.filterByColor = False
+            self.current_params.filterByColor = False
 
         if blob_area_en:
-            blob_params.filterByArea = True
-            blob_params.minArea = blob_area_min
-            blob_params.maxArea = blob_area_max
+            self.current_params.filterByArea = True
+            self.current_params.minArea = blob_area_min
+            self.current_params.maxArea = blob_area_max
         else:
-            blob_params.filterByArea = False
+            self.current_params.filterByArea = False
 
         if blob_circ_en:
-            blob_params.filterByCircularity = True
-            blob_params.minCircularity = blob_circ_min
-            blob_params.maxCircularity = blob_circ_max
+            self.current_params.filterByCircularity = True
+            self.current_params.minCircularity = blob_circ_min
+            self.current_params.maxCircularity = blob_circ_max
         else:
-            blob_params.filterByCircularity = False
+            self.current_params.filterByCircularity = False
 
         if blob_conv_en:
-            blob_params.filterByConvexity = True
-            blob_params.minConvexity = blob_conv_min
-            blob_params.maxConvexity = blob_conv_max
+            self.current_params.filterByConvexity = True
+            self.current_params.minConvexity = blob_conv_min
+            self.current_params.maxConvexity = blob_conv_max
         else:
-            blob_params.filterByConvexity = False
+            self.current_params.filterByConvexity = False
 
         if blob_inertia_en:
-            blob_params.filterByInertia = True
-            blob_params.minInertiaRatio = blob_inertia_min
-            blob_params.maxInertiaRatio = blob_inertia_max
+            self.current_params.filterByInertia = True
+            self.current_params.minInertiaRatio = blob_inertia_min
+            self.current_params.maxInertiaRatio = blob_inertia_max
         else:
-            blob_params.filterByInertia = False
-
-        detector = cv2.SimpleBlobDetector(blob_params)
-        keypoints = detector.detect(input_frame)
-        self.number_embryos_detected_signal.emit(len(keypoints))
-        output_frame = cv2.drawKeypoints(overlay_frame, keypoints, color=(255, 0, 0))
-        return output_frame
+            self.current_params.filterByInertia = False
 
     @staticmethod
     def convert_to_qimage(input_matrix):
@@ -422,13 +483,27 @@ class PickAndPlateVideo(QtCore.QThread):
         self.reconnect_to_camera_flag = True
 
     def detection_calibration_preview_status_slot(self, enabled_state, which_image):
+        if enabled_state:
+            self.setup_params_once = True
+
         self.video_being_used = enabled_state
         self.video_output_type = which_image
         self.video_output_widget_name = self.DETECTION_CAL
 
     def system_calibration_preview_status_slot(self, enabled_state):
+
         self.video_being_used = enabled_state
         self.video_output_widget_name = self.SYSTEM_CAL
+
+    def cycle_run_changed_slot(self, enabled_state):
+        if enabled_state:
+            self.setup_params_once = True
+
+        self.video_being_used = enabled_state
+        self.video_output_widget_name = self.CYCLE_RUN
+
+    def on_cycle_run_image_requested_slot(self):
+        self.wait_for_image_req = False
 
     def images_displayed_slot(self):
         self.images_displayed = True

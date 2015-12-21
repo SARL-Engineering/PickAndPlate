@@ -228,7 +228,7 @@ class SerialHandler(QtCore.QThread):
         # self.serial_out_queue.append(self.convert_to_json({'xvm':8000}))
         # self.serial_out_queue.append(self.convert_to_json({'yvm':8000}))
         # self.serial_out_queue.append(self.convert_to_json({'zzb':6.5}))
-        # self.serial_out_queue.append(self.convert_to_json({'zsv':50}))
+        # self.serial_out_queue.append(self.convert_to_json({'mt':20}))
 
     def on_dump_tinyg_settings_dump_slot(self):
         self.serial_out_queue.append(self.convert_to_json({'sys': None}))

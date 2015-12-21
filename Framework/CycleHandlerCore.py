@@ -33,12 +33,15 @@ __status__ = "Development"
 # Python native imports
 from PyQt4 import QtCore
 import logging
+from math import sqrt, pow
 
 # Custom imports
 
 #####################################
 # Global Variables
 #####################################
+CAL_POINT_DIST_MM = 25
+
 
 #####################################
 # PickAndPlateController Definition
@@ -65,6 +68,7 @@ class PickAndPlateCycleHandler(QtCore.QThread):
         # ########## Thread flags ##########
         self.not_abort_flag = True
         self.cycle_running_flag = False
+        self.cycle_init_flag = False
 
         # ########## Class Variables ##########
         self.cycle_paused = False
@@ -76,6 +80,19 @@ class PickAndPlateCycleHandler(QtCore.QThread):
         self.tinyg_y_location = 0
         self.tinyg_z_location = 0
         self.tinyg_a_location = 0
+
+        self.dish_x = 0
+        self.dish_y = 0
+        self.a1_x = 0
+        self.a1_y = 0
+        self.waste_x = 0
+        self.waste_y = 0
+
+        self.dish_center_px_x = 0
+        self.dish_center_px_y = 0
+        self.dist_cal_x = 0
+        self.dist_cal_y = 0
+        self.mm_per_px = 0
 
         # ########## Make signal/slot connections ##########
         self.connect_signals_to_slots()
@@ -101,6 +118,10 @@ class PickAndPlateCycleHandler(QtCore.QThread):
         self.logger.debug("PickAndPlate Cycle Handler Thread Starting...")
         while self.not_abort_flag:
             if self.cycle_running_flag:
+                if self.cycle_init_flag:
+                    self.run_cycle_init()
+                    self.cycle_init_flag = False
+
                 self.run_main_pick_and_plate_cycle()
                 self.cycle_running_flag = False
             else:
@@ -109,39 +130,41 @@ class PickAndPlateCycleHandler(QtCore.QThread):
         self.logger.debug("PickAndPlate Cycle Handler Thread Exiting...")
 
     def run_main_pick_and_plate_cycle(self):
-        dish_x = self.settings.value("system/system_calibration/dish_x_center").toFloat()[0]
-        dish_y = self.settings.value("system/system_calibration/dish_y_center").toFloat()[0]
-        a1_x = self.settings.value("system/system_calibration/a1_x_center").toFloat()[0]
-        a1_y = self.settings.value("system/system_calibration/a1_y_center").toFloat()[0]
-        waste_x = self.settings.value("system/system_calibration/waste_x_center").toFloat()[0]
-        waste_y = self.settings.value("system/system_calibration/waste_y_center").toFloat()[0]
 
-        self.reset_cycle_run_flags_and_variables()
 
-        self.run_init()
-        self.set_lights(500)
-        self.move_z(29)
+        pass
 
-        while self.cycle_running_flag:
-            self.move_x_y(dish_x, dish_y)
-            self.move_z(-10)
-            self.move_a(100)
-            self.move_z(29)
+        # well_x = a1_x
+        # well_y = a1_y
 
-            self.move_x_y(a1_x, a1_y)
-            self.move_z(-10)
-            self.move_a(-100)
-            self.move_z(29)
-
-            self.move_x_y(waste_x, waste_y)
-            self.move_z(-10)
-            self.move_a(-50)
-            self.move_a(50)
-            self.move_z(29)
-
-            self.msleep(2000)
-
-        self.set_lights(0)
+        # while self.cycle_running_flag:
+        #     self.msleep(500)
+        #     # self.move_x_y(dish_x, dish_y)
+            # self.move_z(-10)
+            # self.move_a(100)
+            # self.move_z(29)
+            #
+            # self.move_x_y(well_x, well_y)
+            # self.move_z(-10)
+            # self.move_a(-100)
+            # self.move_z(29)
+            #
+            # self.move_x_y(waste_x, waste_y)
+            # self.move_z(-10)
+            # self.move_a(-50)
+            # self.move_a(50)
+            # self.move_z(29)
+            #
+            # if (well_y + 9) > (a1_y + (11*9)):
+            #     well_x += 9
+            #     well_y = a1_y
+            # else:
+            #     well_y += 9
+            #
+            # if well_x > (a1_x + (7*9)):
+            #     self.cycle_running_flag = False
+        # self.move_x_y(0, 0)
+        # self.set_lights(0)
 
         # Run controller init for cycle run
         # Set video controller to cycle mode
@@ -173,6 +196,7 @@ class PickAndPlateCycleHandler(QtCore.QThread):
 
         # Determine if embryo is gone or if double pick occurred and update statistics
 
+    ########## Movement and Controller Methods ###########
     def move_x_y(self, x, y):
         self.controller_command_complete = False
         self.x_y_move_request_signal.emit(x, y)
@@ -197,14 +221,23 @@ class PickAndPlateCycleHandler(QtCore.QThread):
         while not self.controller_command_complete:
             self.msleep(50)
 
-    def run_init(self):
+    def run_hardware_init(self):
         self.init_command_complete = False
         self.full_system_home_request_signal.emit()
         while not self.init_command_complete:
             self.msleep(50)
 
+
+    ##########  ###########
+    def run_cycle_init(self):
+        self.set_cycle_run_flags_and_variables()
+        self.run_hardware_init()
+        self.set_lights(500)
+        self.move_z(29)
+
     def on_cycle_start_pressed_slot(self):
         self.cycle_running_flag = True
+        self.cycle_init_flag = True
 
     def on_cycle_pause_pressed_slot(self):
         self.cycle_paused = True
@@ -215,8 +248,23 @@ class PickAndPlateCycleHandler(QtCore.QThread):
     def on_cycle_stop_pressed_slot(self):
         self.cycle_running_flag = False
 
-    def reset_cycle_run_flags_and_variables(self):
+    def set_cycle_run_flags_and_variables(self):
+        # Control flags / vars
         self.cycle_paused = False
+
+        # Cal Vars
+        self.dish_x = self.settings.value("system/system_calibration/dish_x_center").toFloat()[0]
+        self.dish_y = self.settings.value("system/system_calibration/dish_y_center").toFloat()[0]
+        self.a1_x = self.settings.value("system/system_calibration/a1_x_center").toFloat()[0]
+        self.a1_y = self.settings.value("system/system_calibration/a1_y_center").toFloat()[0]
+        self.waste_x = self.settings.value("system/system_calibration/waste_x_center").toFloat()[0]
+        self.waste_y = self.settings.value("system/system_calibration/waste_y_center").toFloat()[0]
+
+        self.dish_center_px_x = self.settings.value("system/system_calibration/crop_x_center").toInt()[0]
+        self.dish_center_px_y = self.settings.value("system/system_calibration/crop_y_center").toInt()[0]
+        self.dist_cal_x = self.settings.value("system/system_calibration/distance_cal_x").toInt()[0]
+        self.dist_cal_y = self.settings.value("system/system_calibration/distance_cal_y").toInt()[0]
+        self.mm_per_px = CAL_POINT_DIST_MM / sqrt(pow(self.dist_cal_x, 2) + pow(self.dist_cal_y, 2))
 
     def on_controller_command_completed_slot(self):
         self.controller_command_complete = True
