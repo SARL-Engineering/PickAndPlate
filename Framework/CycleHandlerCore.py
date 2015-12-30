@@ -33,7 +33,7 @@ __status__ = "Development"
 # Python native imports
 from PyQt4 import QtCore
 import logging
-from math import sqrt, pow
+from math import sqrt, pow, isnan
 
 # Custom imports
 
@@ -52,6 +52,9 @@ class PickAndPlateCycleHandler(QtCore.QThread):
     z_move_request_signal = QtCore.pyqtSignal(float)
     a_move_request_signal = QtCore.pyqtSignal(int)
     light_change_signal = QtCore.pyqtSignal(int)
+
+    cycle_run_state_change_signal = QtCore.pyqtSignal(bool)
+    cycle_run_image_request_signal = QtCore.pyqtSignal()
 
     def __init__(self, main_window):
         QtCore.QThread.__init__(self)
@@ -94,6 +97,16 @@ class PickAndPlateCycleHandler(QtCore.QThread):
         self.dist_cal_y = 0
         self.mm_per_px = 0
 
+        self.cropped_only_raw = None
+        self.cycle_monitor_qimage = None
+        self.last_pick_qimage = None
+        self.current_pick_qimage = None
+
+        self.full_run_keypoints_array = []
+        self.current_frame_keypoints = None
+
+        self.data_received = False
+
         # ########## Make signal/slot connections ##########
         self.connect_signals_to_slots()
 
@@ -114,6 +127,13 @@ class PickAndPlateCycleHandler(QtCore.QThread):
         self.main_window.controller.controller_command_complete_signal.connect(
                 self.on_controller_command_completed_slot)
 
+        # VideoCore to CycleHandler
+        self.main_window.video.requested_image_ready_signal.connect(self.on_video_requested_image_ready_slot)
+
+        # CycleHandler to VideoCore
+        self.cycle_run_state_change_signal.connect(self.main_window.video.cycle_run_changed_slot)
+        self.cycle_run_image_request_signal.connect(self.main_window.video.on_cycle_run_image_requested_slot)
+
     def run(self):
         self.logger.debug("PickAndPlate Cycle Handler Thread Starting...")
         while self.not_abort_flag:
@@ -123,14 +143,51 @@ class PickAndPlateCycleHandler(QtCore.QThread):
                     self.cycle_init_flag = False
 
                 self.run_main_pick_and_plate_cycle()
-                self.cycle_running_flag = False
             else:
                 self.msleep(250)
 
         self.logger.debug("PickAndPlate Cycle Handler Thread Exiting...")
 
     def run_main_pick_and_plate_cycle(self):
+        self.cycle_run_image_request_signal.emit()
+        while not self.data_received:
+            self.msleep(100)
 
+        embryo_x_px = 0
+        embryo_y_px = 0
+
+        for point in self.current_frame_keypoints:
+            if (not isnan(float(point.pt[0]))) and (not isnan((point.pt[1]))):
+                embryo_x_px = point.pt[0]
+                embryo_y_px = point.pt[1]
+                break
+
+        #self.logger.info("Center X: " + str(self.dish_center_px_x) + "\tX: " + str(embryo_x_px))
+        #self.logger.info("Center Y: " + str(self.dish_center_px_y) + "\tY: " + str(embryo_y_px))
+
+        if embryo_x_px and embryo_y_px:
+            embryo_x = (self.dish_x - ((embryo_x_px - self.dish_center_px_x) * self.mm_per_px))
+            embryo_y = (self.dish_y + ((embryo_y_px - self.dish_center_px_y) * self.mm_per_px))
+
+            self.logger.info("Center X: " + str(self.dish_x) + "\tX: " + str(embryo_x))
+            self.logger.info("Center Y: " + str(self.dish_y) + "\tY: " + str(embryo_y))
+
+            self.move_z(29)
+            self.move_x_y(embryo_x, embryo_y)
+            self.move_z(-10)
+            self.move_a(-100)
+            self.move_z(29)
+            self.move_x_y(self.a1_x, self.a1_y)
+            self.move_z(-10)
+            self.move_a(100)
+            self.move_z(29)
+            self.move_x_y(self.waste_x, self.waste_y)
+            self.move_z(-10)
+            self.move_a(-50)
+            self.move_a(50)
+
+
+        self.msleep(2000)
 
         pass
 
@@ -230,10 +287,13 @@ class PickAndPlateCycleHandler(QtCore.QThread):
 
     ##########  ###########
     def run_cycle_init(self):
+        self.cycle_run_state_change_signal.emit(True)
+        self.cycle_run_image_request_signal.emit()
         self.set_cycle_run_flags_and_variables()
         self.run_hardware_init()
         self.set_lights(500)
         self.move_z(29)
+
 
     def on_cycle_start_pressed_slot(self):
         self.cycle_running_flag = True
@@ -265,6 +325,14 @@ class PickAndPlateCycleHandler(QtCore.QThread):
         self.dist_cal_x = self.settings.value("system/system_calibration/distance_cal_x").toInt()[0]
         self.dist_cal_y = self.settings.value("system/system_calibration/distance_cal_y").toInt()[0]
         self.mm_per_px = CAL_POINT_DIST_MM / sqrt(pow(self.dist_cal_x, 2) + pow(self.dist_cal_y, 2))
+
+    def on_video_requested_image_ready_slot(self):
+        self.cropped_only_raw = self.main_window.video.cropped_only_raw
+        self.current_frame_keypoints = self.main_window.video.keypoints
+        #if self.current_frame_keypoints:
+        #    self.logger.info("Keypoints: " + str(len(self.current_frame_keypoints)))
+
+        self.data_received = True
 
     def on_controller_command_completed_slot(self):
         self.controller_command_complete = True

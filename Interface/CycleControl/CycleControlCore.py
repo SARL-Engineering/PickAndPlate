@@ -31,7 +31,7 @@ __status__ = "Development"
 # Imports
 #####################################
 # Python native imports
-from PyQt4 import QtCore
+from PyQt4 import QtCore, QtGui
 import logging
 
 # Custom imports
@@ -111,6 +111,8 @@ class CycleControl(QtCore.QThread):
         self.pause_cycle_signal.connect(self.main_window.cycle_handler.on_cycle_pause_pressed_slot)
         self.resume_cycle_signal.connect(self.main_window.cycle_handler.on_cycle_resume_pressed_slot)
 
+        self.main_window.video.requested_image_ready_signal.connect(self.on_cycle_monitor_image_ready_slot)
+
     def set_labels_to_defaults(self):
         self.cycle_mon_label
 
@@ -152,3 +154,6 @@ class CycleControl(QtCore.QThread):
             self.start_button.setEnabled(True)
             self.master.cycle_running = False
             self.stop_cycle_signal.emit()
+
+    def on_cycle_monitor_image_ready_slot(self):
+        self.cycle_mon_label.setPixmap(QtGui.QPixmap.fromImage(self.main_window.video.cycle_monitor_qimage))

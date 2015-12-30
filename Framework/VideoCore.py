@@ -57,6 +57,7 @@ CV_CAP_PROP_FRAME_HEIGHT = 4
 CV_CAP_PROP_FPS = 5
 CV_CAP_PROP_FOURCC = 6
 
+MUTEX = QtCore.QMutex()
 
 #####################################
 # FrameGrabber Class
@@ -144,6 +145,7 @@ class PickAndPlateVideo(QtCore.QThread):
         self.rgb_frame = numpy.array([])
         self.greyscale_frame = numpy.array([])
 
+        self.cropped_only_raw = None
         self.settings_and_cal_qimage = None
         self.cycle_monitor_qimage = None
         self.last_pick_qimage = None
@@ -356,32 +358,28 @@ class PickAndPlateVideo(QtCore.QThread):
             self.crop_dim_half = (self.settings.value("system/system_calibration/crop_dimension").toInt()[0] / 2)
             self.usable_offset = self.settings.value("system/system_calibration/usable_area_offset").toInt()[0]
 
-        while self.wait_for_image_req:
-            self.msleep(100)
-        self.wait_for_image_req = True
+        if  not self.wait_for_image_req:
+            self.wait_for_image_req = True
 
-        frame = cv2.cvtColor(self.raw_frame, cv2.COLOR_RGB2GRAY)
-        return_val, frame = cv2.threshold(frame, self.min_thresh, 255, cv2.cv.CV_THRESH_BINARY)
-        mask_frame = numpy.zeros((self.y_res, self.x_res), numpy.uint8)
-        cv2.circle(mask_frame, (self.x_center, self.y_center), (self.crop_dim_half - self.usable_offset), 255, -1)
-        frame = cv2.bitwise_and(frame, mask_frame)
-        frame = self.masked_detect_and_overlay(frame, self.raw_frame)
-        frame = self.crop_image(frame)
+            frame = cv2.cvtColor(self.raw_frame, cv2.COLOR_RGB2GRAY)
+            return_val, frame = cv2.threshold(frame, self.min_thresh, 255, cv2.cv.CV_THRESH_BINARY)
+            mask_frame = numpy.zeros((self.y_res, self.x_res), numpy.uint8)
+            cv2.circle(mask_frame, (self.x_center, self.y_center), (self.crop_dim_half - self.usable_offset), 255, -1)
+            frame = cv2.bitwise_and(frame, mask_frame)
+            frame = self.masked_detect_and_overlay(frame, self.raw_frame)
+            frame = self.crop_image(frame)
 
-        # Determine which embryo to pick
+            # Determine which embryo to pick
+            try:
+                self.cropped_only_raw = frame
 
+                resized = cv2.resize(frame, (200, 200))
+                self.cycle_monitor_qimage = self.convert_to_qimage(resized)
 
-        try:
-            self.images_displayed = False
-            resized = cv2.resize(frame, (200, 200))
+                self.requested_image_ready_signal.emit()
 
-            self.cycle_monitor_qimage = self.convert_to_qimage(resized)
-            self.requested_image_ready_signal.emit()
-
-            while not self.images_displayed:
-                self.msleep(5)
-        except:
-            self.logger.debug("failed to convert")
+            except:
+                self.logger.debug("failed to convert")
 
 
 
