@@ -106,6 +106,9 @@ class PickAndPlateCycleHandler(QtCore.QThread):
         self.full_run_keypoints_array = []
         self.current_frame_keypoints = None
 
+        self.cur_plate_x = None
+        self.cur_plate_y = None
+
         self.data_received = False
 
         # ########## Make signal/slot connections ##########
@@ -176,12 +179,12 @@ class PickAndPlateCycleHandler(QtCore.QThread):
 
             self.move_z(29)
             self.move_x_y(embryo_x, embryo_y)
-            self.move_z(-10)
-            self.move_a(100)
+            self.move_z(-15)
+            self.move_a(150)
             self.move_z(29)
-            self.move_x_y(self.a1_x, self.a1_y)
-            self.move_z(-10)
-            self.move_a(-100)
+            self.move_x_y(self.cur_plate_x, self.cur_plate_y)
+            self.move_z(-15)
+            self.move_a(-150)
             self.move_z(29)
             self.move_x_y(self.waste_x, self.waste_y)
             self.move_z(-10)
@@ -189,9 +192,16 @@ class PickAndPlateCycleHandler(QtCore.QThread):
             self.move_a(50)
             self.move_z(29)
 
+            if (self.cur_plate_y + 9) > (self.a1_y + (11*9)):
+                self.cur_plate_x += 9
+                self.cur_plate_y = self.a1_y
+            else:
+                self.cur_plate_y += 9
+
+            if self.cur_plate_x > (self.a1_x + (7*9)):
+                self.cycle_running_flag = False
+
         self.msleep(200)
-        # well_x = a1_x
-        # well_y = a1_y
 
         # while self.cycle_running_flag:
         #     self.msleep(500)
@@ -211,14 +221,7 @@ class PickAndPlateCycleHandler(QtCore.QThread):
             # self.move_a(50)
             # self.move_z(29)
             #
-            # if (well_y + 9) > (a1_y + (11*9)):
-            #     well_x += 9
-            #     well_y = a1_y
-            # else:
-            #     well_y += 9
             #
-            # if well_x > (a1_x + (7*9)):
-            #     self.cycle_running_flag = False
         # self.move_x_y(0, 0)
         # self.set_lights(0)
 
@@ -295,13 +298,12 @@ class PickAndPlateCycleHandler(QtCore.QThread):
 
     ##########  ###########
     def run_cycle_init(self):
-        self.set_cycle_run_flags_and_variables()
-        self.run_hardware_init()
-        self.set_lights(500)
-        self.move_z(29)
         self.cycle_run_state_change_signal.emit(True)
         self.cycle_run_image_request_signal.emit()
-
+        self.set_cycle_run_flags_and_variables()
+        self.run_hardware_init()
+        self.set_lights(1000)
+        self.move_z(29)
 
     def on_cycle_start_pressed_slot(self):
         self.cycle_running_flag = True
@@ -333,6 +335,9 @@ class PickAndPlateCycleHandler(QtCore.QThread):
         self.dist_cal_x = self.settings.value("system/system_calibration/distance_cal_x").toInt()[0]
         self.dist_cal_y = self.settings.value("system/system_calibration/distance_cal_y").toInt()[0]
         self.mm_per_px = CAL_POINT_DIST_MM / sqrt(pow(self.dist_cal_x, 2) + pow(self.dist_cal_y, 2))
+
+        self.cur_plate_x = self.a1_x
+        self.cur_plate_y = self.a1_y
 
     def on_video_requested_image_ready_slot(self):
         self.cropped_only_raw = self.main_window.video.cropped_only_raw

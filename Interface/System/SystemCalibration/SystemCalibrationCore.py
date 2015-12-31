@@ -260,7 +260,7 @@ class SystemCalibration(QtCore.QObject):
         self.logger.debug("Waste Center Saved")
 
     def on_lights_on_clicked_slot(self):
-        self.light_change_signal.emit(500)
+        self.light_change_signal.emit(1000)
 
     def on_lights_off_clicked_slot(self):
         self.light_change_signal.emit(0)

@@ -156,4 +156,7 @@ class CycleControl(QtCore.QThread):
             self.stop_cycle_signal.emit()
 
     def on_cycle_monitor_image_ready_slot(self):
-        self.cycle_mon_label.setPixmap(QtGui.QPixmap.fromImage(self.main_window.video.cycle_monitor_qimage))
+        try:
+            self.cycle_mon_label.setPixmap(QtGui.QPixmap.fromImage(self.main_window.video.cycle_monitor_qimage))
+        except:
+            pass
