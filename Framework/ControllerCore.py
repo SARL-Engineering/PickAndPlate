@@ -63,6 +63,7 @@ from PyQt4 import QtCore
 import logging
 import serial
 import json
+import time
 
 # Custom imports
 
@@ -376,6 +377,9 @@ class PickAndPlateController(QtCore.QThread):
 
         self.command_queue = []
 
+        self.timing_start_time = 0
+        self.timing_stop_time = 0
+
         # ########## Make signal/slot connections ##########
         self.connect_signals_to_slots()
 
@@ -463,13 +467,22 @@ class PickAndPlateController(QtCore.QThread):
 
     ########## Methods for all axes ##########
     def initial_system_homing_request(self):
-        self.on_light_change_request_signal_slot(500)
-        self.on_a_axis_home_requested_slot()
-        self.on_a_axis_move_requested_slot(75)
-        self.on_z_axis_homing_requested_slot(ROUGH)
-        self.on_x_y_axis_move_relative_requested_slot(-20, -20)
-        self.on_x_y_axes_homing_requested_slot()
-        self.on_light_change_request_signal_slot(0)
+        # self.on_light_change_request_signal_slot(500)
+        # self.on_a_axis_home_requested_slot()
+        # self.on_a_axis_move_requested_slot(75)
+        # self.on_z_axis_homing_requested_slot(ROUGH)
+        # self.on_x_y_axis_move_relative_requested_slot(-20, -20)
+        # self.on_x_y_axes_homing_requested_slot()
+        # self.on_light_change_request_signal_slot(0)
+
+        self.light_change_requested(500)
+        self.a_axis_home_request()
+        self.a_axis_move_request(75)
+        self.z_home_request(ROUGH)
+        self.x_y_move_relative_request(-20, -20)
+        self.x_y_home_request()
+        self.light_change_requested(0)
+
         # self.tinyg_dump_settings_signal.emit()
 
     def on_initial_system_homing_requested_slot(self):
@@ -481,20 +494,21 @@ class PickAndPlateController(QtCore.QThread):
 
         self.initial_system_homing_request()
 
-        self.on_light_change_request_signal_slot(500)
-        self.on_x_y_axis_move_requested_slot(precision_z_x_center, precision_z_y_center)
-        self.on_z_axis_move_requested_slot(-22.5)
-        self.on_z_axis_homing_requested_slot(FINE)
-        self.on_x_y_axis_precision_home_requested_slot()
+        self.light_change_requested(500)
+        self.x_y_move_request(precision_z_x_center, precision_z_y_center)
+        self.z_axis_move_request(-22.5)
+        self.z_home_request(FINE)
+        self.x_y_axis_precision_home_request()
         self.msleep(3500)
 
         while (self.tinyg_x_location != 0) or (self.tinyg_y_location != 0):
             self.x_y_move_request(0, 0)
 
-        self.on_z_axis_move_requested_slot(0)
-        self.on_light_change_request_signal_slot(0)
+        self.z_axis_move_request(0)
+        self.light_change_requested(0)
 
         self.controller_init_complete_signal.emit()
+        self.logger.info("START HERE!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
 
     def on_full_system_homing_requested_slot(self):
         self.command_queue.append({'Command':'Full Homing'})
@@ -502,9 +516,11 @@ class PickAndPlateController(QtCore.QThread):
 
     ########## Z Axis Methods ##########
     def on_z_axis_move_requested_slot(self, z):
+        self.timing_start_time = time.time()
         self.command_queue.append({'Command':'Z Move ABS', 'Z':z})
 
     def on_z_axis_move_relative_requested_slot(self, z):
+        self.timing_start_time = time.time()
         self.command_queue.append({'Command':'Z Move REL', 'Z':z})
 
     def z_axis_move_request(self, z):
@@ -523,6 +539,8 @@ class PickAndPlateController(QtCore.QThread):
         while self.tinyg_machine_state == MOTION_RUNNING_STATE:
             self.msleep(50)
 
+        self.timing_stop_time = time.time()
+        self.logger.info("Z move completed in " + str(self.timing_stop_time-self.timing_start_time) + " seconds.")
         self.controller_command_complete_signal.emit()
 
     def on_z_axis_homing_requested_slot(self, homing_type):
@@ -540,9 +558,13 @@ class PickAndPlateController(QtCore.QThread):
 
     ########## X Y Axis Methods ##########
     def on_x_y_axis_move_requested_slot(self, x, y):
+        self.timing_start_time = time.time()
+
+        self.logger.info("Received X_Y at " + str(time.time()) + " seconds.")
         self.command_queue.append({'Command':'X/Y Move ABS', 'X':x, 'Y':y})
 
     def on_x_y_axis_move_relative_requested_slot(self, x, y):
+        self.timing_start_time = time.time()
         self.command_queue.append({'Command':'X/Y Move REL', 'X':x, 'Y':y})
 
     def x_y_move_request(self, x ,y):
@@ -553,6 +575,8 @@ class PickAndPlateController(QtCore.QThread):
         while self.tinyg_machine_state == MOTION_RUNNING_STATE:
             self.msleep(50)
 
+        self.timing_stop_time = time.time()
+        self.logger.info("X_Y move completed in " + str(self.timing_stop_time-self.timing_start_time) + " seconds.")
         self.controller_command_complete_signal.emit()
 
     def x_y_move_relative_request(self, x, y):
@@ -563,10 +587,13 @@ class PickAndPlateController(QtCore.QThread):
             # self.logger.debug("X Y Home Waiting...")
             self.msleep(50)
 
+        self.timing_stop_time = time.time()
+        self.logger.info("X_Y REL move completed in " + str(self.timing_stop_time-self.timing_start_time) + " seconds.")
         self.controller_command_complete_signal.emit()
 
 
     def on_x_y_axes_homing_requested_slot(self):
+        self.timing_start_time = time.time()
         self.command_queue.append({'Command':'X/Y Home'})
 
     def x_y_home_request(self):
@@ -580,6 +607,7 @@ class PickAndPlateController(QtCore.QThread):
         self.msleep(1000)
 
     def on_x_y_axis_precision_home_requested_slot(self):
+        self.timing_start_time = time.time()
         self.command_queue.append({'Command':'X/Y Precision Home'})
 
     def x_y_axis_precision_home_request(self):
@@ -594,6 +622,7 @@ class PickAndPlateController(QtCore.QThread):
 
     ########## A Axis Methods ##########
     def on_a_axis_move_requested_slot(self, microliters):
+        self.timing_start_time = time.time()
         self.command_queue.append({'Command':'A Move REL', 'uL':microliters})
 
     def a_axis_move_request(self, micro_liters):
@@ -605,10 +634,13 @@ class PickAndPlateController(QtCore.QThread):
         while self.tinyg_machine_state == MOTION_RUNNING_STATE:
             self.msleep(50)
 
+        self.timing_stop_time = time.time()
+        self.logger.info("A move completed in " + str(self.timing_stop_time-self.timing_start_time) + " seconds.")
         self.controller_command_complete_signal.emit()
 
 
     def on_a_axis_home_requested_slot(self):
+        self.timing_start_time = time.time()
         self.command_queue.append({'Command':'A Home'})
 
     def a_axis_home_request(self):

@@ -34,6 +34,7 @@ __status__ = "Development"
 from PyQt4 import QtCore
 import logging
 from math import sqrt, pow, isnan
+import time
 
 # Custom imports
 
@@ -151,6 +152,7 @@ class PickAndPlateCycleHandler(QtCore.QThread):
     def run_main_pick_and_plate_cycle(self):
         self.cycle_run_image_request_signal.emit()
         while not self.data_received:
+            self.logger.info("Waiting for data")
             self.msleep(100)
 
         embryo_x_px = 0
@@ -162,8 +164,8 @@ class PickAndPlateCycleHandler(QtCore.QThread):
                 embryo_y_px = point.pt[1]
                 break
 
-        #self.logger.info("Center X: " + str(self.dish_center_px_x) + "\tX: " + str(embryo_x_px))
-        #self.logger.info("Center Y: " + str(self.dish_center_px_y) + "\tY: " + str(embryo_y_px))
+        self.logger.info("Center X: " + str(self.dish_center_px_x) + "\tX: " + str(embryo_x_px))
+        self.logger.info("Center Y: " + str(self.dish_center_px_y) + "\tY: " + str(embryo_y_px))
 
         if embryo_x_px and embryo_y_px:
             embryo_x = (self.dish_x - ((embryo_x_px - self.dish_center_px_x) * self.mm_per_px))
@@ -175,22 +177,19 @@ class PickAndPlateCycleHandler(QtCore.QThread):
             self.move_z(29)
             self.move_x_y(embryo_x, embryo_y)
             self.move_z(-10)
-            self.move_a(-100)
+            self.move_a(100)
             self.move_z(29)
             self.move_x_y(self.a1_x, self.a1_y)
             self.move_z(-10)
-            self.move_a(100)
+            self.move_a(-100)
             self.move_z(29)
             self.move_x_y(self.waste_x, self.waste_y)
             self.move_z(-10)
             self.move_a(-50)
             self.move_a(50)
+            self.move_z(29)
 
-
-        self.msleep(2000)
-
-        pass
-
+        self.msleep(200)
         # well_x = a1_x
         # well_y = a1_y
 
@@ -255,44 +254,53 @@ class PickAndPlateCycleHandler(QtCore.QThread):
 
     ########## Movement and Controller Methods ###########
     def move_x_y(self, x, y):
+        start = time.time()
+        self.logger.info("Sent X_Y at " + str(start) + " seconds.")
         self.controller_command_complete = False
         self.x_y_move_request_signal.emit(x, y)
         while not self.controller_command_complete:
-            self.msleep(50)
+            # self.logger.info("Waiting for x_y")
+            self.msleep(150)
+
+        self.logger.info("Finished X_Y after " + str(time.time()-start) + " seconds.")
 
     def move_z(self, z):
         self.controller_command_complete = False
         self.z_move_request_signal.emit(z)
         while not self.controller_command_complete:
-            self.msleep(50)
+            # self.logger.info("Waiting for z")
+            self.msleep(150)
 
     def move_a(self, a):
         self.controller_command_complete = False
         self.a_move_request_signal.emit(a)
         while not self.controller_command_complete:
-            self.msleep(50)
+            # self.logger.info("Waiting for a")
+            self.msleep(150)
 
     def set_lights(self, brightness):
         self.controller_command_complete = False
         self.light_change_signal.emit(brightness)
         while not self.controller_command_complete:
-            self.msleep(50)
+            # self.logger.info("Waiting for lights")
+            self.msleep(150)
 
     def run_hardware_init(self):
         self.init_command_complete = False
         self.full_system_home_request_signal.emit()
         while not self.init_command_complete:
-            self.msleep(50)
+            # self.logger.info("Waiting for init complete")
+            self.msleep(150)
 
 
     ##########  ###########
     def run_cycle_init(self):
-        self.cycle_run_state_change_signal.emit(True)
-        self.cycle_run_image_request_signal.emit()
         self.set_cycle_run_flags_and_variables()
         self.run_hardware_init()
         self.set_lights(500)
         self.move_z(29)
+        self.cycle_run_state_change_signal.emit(True)
+        self.cycle_run_image_request_signal.emit()
 
 
     def on_cycle_start_pressed_slot(self):
@@ -329,9 +337,6 @@ class PickAndPlateCycleHandler(QtCore.QThread):
     def on_video_requested_image_ready_slot(self):
         self.cropped_only_raw = self.main_window.video.cropped_only_raw
         self.current_frame_keypoints = self.main_window.video.keypoints
-        #if self.current_frame_keypoints:
-        #    self.logger.info("Keypoints: " + str(len(self.current_frame_keypoints)))
-
         self.data_received = True
 
     def on_controller_command_completed_slot(self):
