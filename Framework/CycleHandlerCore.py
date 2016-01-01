@@ -73,6 +73,7 @@ class PickAndPlateCycleHandler(QtCore.QThread):
         self.not_abort_flag = True
         self.cycle_running_flag = False
         self.cycle_init_flag = False
+        self.cycle_end_flag = False
 
         # ########## Class Variables ##########
         self.cycle_paused = False
@@ -147,14 +148,22 @@ class PickAndPlateCycleHandler(QtCore.QThread):
                     self.cycle_init_flag = False
 
                 self.run_main_pick_and_plate_cycle()
+
+                if self.cycle_end_flag:
+                    self.cycle_end_flag = False
+                    self.move_z(29)
+                    self.move_x_y(0,0)
+                    self.set_lights(0)
+                    self.cycle_running_flag = False
             else:
                 self.msleep(250)
 
         self.logger.debug("PickAndPlate Cycle Handler Thread Exiting...")
 
     def run_main_pick_and_plate_cycle(self):
-        self.cycle_run_image_request_signal.emit()
+
         while not self.data_received:
+            self.cycle_run_image_request_signal.emit()
             self.logger.info("Waiting for data")
             self.msleep(100)
 
@@ -162,36 +171,54 @@ class PickAndPlateCycleHandler(QtCore.QThread):
         embryo_y_px = 0
 
         for point in self.current_frame_keypoints:
-            if (not isnan(float(point.pt[0]))) and (not isnan((point.pt[1]))):
+            if (not isnan(point.pt[0])) and (not isnan(point.pt[1])):
                 embryo_x_px = point.pt[0]
                 embryo_y_px = point.pt[1]
                 break
 
-        self.logger.info("Center X: " + str(self.dish_center_px_x) + "\tX: " + str(embryo_x_px))
-        self.logger.info("Center Y: " + str(self.dish_center_px_y) + "\tY: " + str(embryo_y_px))
+        # self.logger.info("Center X: " + str(self.dish_center_px_x) + "\tX: " + str(embryo_x_px))
+        # self.logger.info("Center Y: " + str(self.dish_center_px_y) + "\tY: " + str(embryo_y_px))
 
         if embryo_x_px and embryo_y_px:
             embryo_x = (self.dish_x - ((embryo_x_px - self.dish_center_px_x) * self.mm_per_px))
             embryo_y = (self.dish_y + ((embryo_y_px - self.dish_center_px_y) * self.mm_per_px))
 
+            traverse_height = 20
+            pick_depth = -18
+            place_depth = -13
+
             self.logger.info("Center X: " + str(self.dish_x) + "\tX: " + str(embryo_x))
             self.logger.info("Center Y: " + str(self.dish_y) + "\tY: " + str(embryo_y))
 
-            self.move_z(29)
+            # Move up and over to found embryo co-ordinates
+            self.move_z(traverse_height)
             self.move_x_y(embryo_x, embryo_y)
-            self.move_z(-15)
+
+            # Move to pick depth, suck up embryo, and move back up
+            self.move_z(pick_depth)
             self.move_a(150)
-            self.move_z(29)
+            self.move_z(traverse_height)
+
+            # Move to the next unused well on the plate, then go down and expel embryo
             self.move_x_y(self.cur_plate_x, self.cur_plate_y)
-            self.move_z(-15)
+            self.move_z(place_depth)
             self.move_a(-150)
-            self.move_z(29)
+
+            # Move pick head back up and to the waste container
+            self.move_z(traverse_height)
             self.move_x_y(self.waste_x, self.waste_y)
-            self.move_z(-10)
+
+            # Now that we're at the waste container, start looking for a new image
+            self.cycle_run_image_request_signal.emit()
+            self.data_received = False
+
+            # Move down in waste and dispel any extra fluid
+            self.move_z(-5)
             self.move_a(-50)
             self.move_a(50)
-            self.move_z(29)
+            self.move_z(traverse_height)
 
+            # Increment well
             if (self.cur_plate_y + 9) > (self.a1_y + (11*9)):
                 self.cur_plate_x += 9
                 self.cur_plate_y = self.a1_y
@@ -199,9 +226,11 @@ class PickAndPlateCycleHandler(QtCore.QThread):
                 self.cur_plate_y += 9
 
             if self.cur_plate_x > (self.a1_x + (7*9)):
-                self.cycle_running_flag = False
+                self.cycle_end_flag = True
 
-        self.msleep(200)
+        else:
+            self.data_received = False
+            self.msleep(200)
 
         # while self.cycle_running_flag:
         #     self.msleep(500)
@@ -257,15 +286,12 @@ class PickAndPlateCycleHandler(QtCore.QThread):
 
     ########## Movement and Controller Methods ###########
     def move_x_y(self, x, y):
-        start = time.time()
-        self.logger.info("Sent X_Y at " + str(start) + " seconds.")
+        #start = time.time()
         self.controller_command_complete = False
         self.x_y_move_request_signal.emit(x, y)
         while not self.controller_command_complete:
             # self.logger.info("Waiting for x_y")
             self.msleep(150)
-
-        self.logger.info("Finished X_Y after " + str(time.time()-start) + " seconds.")
 
     def move_z(self, z):
         self.controller_command_complete = False
@@ -305,6 +331,8 @@ class PickAndPlateCycleHandler(QtCore.QThread):
         self.set_lights(1000)
         self.move_z(29)
 
+        self.data_received = False
+
     def on_cycle_start_pressed_slot(self):
         self.cycle_running_flag = True
         self.cycle_init_flag = True
@@ -316,7 +344,7 @@ class PickAndPlateCycleHandler(QtCore.QThread):
         self.cycle_paused = False
 
     def on_cycle_stop_pressed_slot(self):
-        self.cycle_running_flag = False
+        self.cycle_end_flag = True
 
     def set_cycle_run_flags_and_variables(self):
         # Control flags / vars

@@ -85,7 +85,7 @@ class FrameGrabber(QtCore.QThread):
                 self.video_camera.grab()
                 self.process_single = False
             else:
-                self.msleep(1000)
+                self.msleep(200)
 
     def set_process_continuous(self):
         self.process_single = False
