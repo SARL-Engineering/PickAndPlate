@@ -113,6 +113,9 @@ class CycleControl(QtCore.QThread):
 
         self.main_window.video.requested_image_ready_signal.connect(self.on_cycle_monitor_image_ready_slot)
 
+        # CycleHandler to CycleControl
+        self.main_window.cycle_handler.interface_cycle_stop_signal.connect(self.on_stop_button_pressed_slot)
+
     def set_labels_to_defaults(self):
         self.cycle_mon_label
 

@@ -62,6 +62,7 @@ class PickAndPlateCycleHandler(QtCore.QThread):
 
     cycle_run_state_change_signal = QtCore.pyqtSignal(bool)
     cycle_run_image_request_signal = QtCore.pyqtSignal()
+    interface_cycle_stop_signal = QtCore.pyqtSignal()
 
     no_embryos_msg_box_show_signal = QtCore.pyqtSignal()
     no_embryos_msg_decision_signal = QtCore.pyqtSignal(int)
@@ -170,6 +171,7 @@ class PickAndPlateCycleHandler(QtCore.QThread):
                     self.move_z(29)
                     self.move_x_y(0,0)
                     self.set_lights(0)
+                    self.interface_cycle_stop_signal.emit()
                     self.cycle_running_flag = False
                 else:
                     self.run_main_pick_and_plate_cycle()
@@ -208,8 +210,8 @@ class PickAndPlateCycleHandler(QtCore.QThread):
             pick_depth = -17
             place_depth = -16
 
-            self.logger.info("Center X: " + str(self.dish_x) + "\tX: " + str(embryo_x))
-            self.logger.info("Center Y: " + str(self.dish_y) + "\tY: " + str(embryo_y))
+            # self.logger.info("Center X: " + str(self.dish_x) + "\tX: " + str(embryo_x))
+            # self.logger.info("Center Y: " + str(self.dish_y) + "\tY: " + str(embryo_y))
 
             # Move up and over to found embryo co-ordinates
             self.move_z(traverse_height)
@@ -235,8 +237,8 @@ class PickAndPlateCycleHandler(QtCore.QThread):
 
             # Move down in waste and dispel any extra fluid
             self.move_z(-5)
-            self.move_a(-75)
-            self.move_a(75)
+            self.move_a(-90)
+            self.move_a(90)
             self.move_z(traverse_height)
 
             # Increment well
@@ -301,10 +303,8 @@ class PickAndPlateCycleHandler(QtCore.QThread):
 
         clicked_button = msg.clickedButton()
         if clicked_button == continue_button:
-            self.logger.info("Continue Pressed")
             self.no_embryos_msg_decision_signal.emit(BUTTON_CONTINUE)
         elif clicked_button == exit_button:
-            self.logger.info("Exit Pressed")
             self.no_embryos_msg_decision_signal.emit(BUTTON_EXIT)
 
 
