@@ -387,9 +387,6 @@ class PickAndPlateVideo(QtCore.QThread):
         detector = cv2.SimpleBlobDetector(self.current_params)
         self.keypoints = detector.detect(input_frame)
         self.number_embryos_detected_signal.emit(len(self.keypoints))
-        # if len(keypoints) > 0:
-        #     self.logger.debug("X: " + str(keypoints[0].pt[0]))
-        #     self.logger.debug("Y: " + str(keypoints[0].pt[1]))
         output_frame = cv2.drawKeypoints(overlay_frame, self.keypoints, color=(255, 0, 0))
         return output_frame
 

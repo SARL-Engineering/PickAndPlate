@@ -209,7 +209,7 @@ class SerialHandler(QtCore.QThread):
             elif 'r' in processed_json:
                 self.tinyg_command_processed_signal.emit()
 
-            self.logger.info("Processed: " + str(processed_json))
+            # self.logger.info("Processed: " + str(processed_json))
         except:
             pass
 
@@ -279,7 +279,7 @@ class SerialHandler(QtCore.QThread):
 
     def on_x_y_precision_homing_requested_slot(self):
         self.serial_out_queue.append(self.convert_to_json({'gc': 'G28.2 X0'}))
-        self.on_relative_position_change_requested_slot(0, -20, 0, 0)
+        self.on_relative_position_change_requested_slot(0, -10, 0, 0)
         self.serial_out_queue.append(self.convert_to_json({'gc': 'G28.2 Y0'}))
 
 
@@ -474,9 +474,9 @@ class PickAndPlateController(QtCore.QThread):
     def initial_system_homing_request(self):
         self.light_change_requested(500)
         self.a_axis_home_request()
-        self.a_axis_move_request(75)
+        self.a_axis_move_request(100)
         self.z_home_request(ROUGH)
-        self.x_y_move_relative_request(-20, -20)
+        self.x_y_move_relative_request(-5, -10)
         self.x_y_home_request()
         self.light_change_requested(0)
 
@@ -493,7 +493,7 @@ class PickAndPlateController(QtCore.QThread):
 
         self.light_change_requested(500)
         self.x_y_move_request(precision_z_x_center, precision_z_y_center)
-        self.z_axis_move_request(-22.5)
+        self.z_axis_move_request(-25)
         self.z_home_request(FINE)
         self.x_y_axis_precision_home_request()
         self.msleep(3500)

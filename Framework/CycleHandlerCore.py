@@ -31,7 +31,7 @@ __status__ = "Development"
 # Imports
 #####################################
 # Python native imports
-from PyQt4 import QtCore
+from PyQt4 import QtCore, QtGui
 import logging
 from math import sqrt, pow, isnan
 import time
@@ -42,6 +42,12 @@ import time
 # Global Variables
 #####################################
 CAL_POINT_DIST_MM = 25
+
+NO_EMBRYO_THRESHOLD = 3
+
+BUTTON_CONTINUE = 0
+BUTTON_EXIT = 1
+BUTTON_WAIT = 2
 
 
 #####################################
@@ -56,6 +62,9 @@ class PickAndPlateCycleHandler(QtCore.QThread):
 
     cycle_run_state_change_signal = QtCore.pyqtSignal(bool)
     cycle_run_image_request_signal = QtCore.pyqtSignal()
+
+    no_embryos_msg_box_show_signal = QtCore.pyqtSignal()
+    no_embryos_msg_decision_signal = QtCore.pyqtSignal(int)
 
     def __init__(self, main_window):
         QtCore.QThread.__init__(self)
@@ -112,6 +121,9 @@ class PickAndPlateCycleHandler(QtCore.QThread):
 
         self.data_received = False
 
+        self.button_state = BUTTON_WAIT
+        self.no_embryo_count = 0
+
         # ########## Make signal/slot connections ##########
         self.connect_signals_to_slots()
 
@@ -139,6 +151,10 @@ class PickAndPlateCycleHandler(QtCore.QThread):
         self.cycle_run_state_change_signal.connect(self.main_window.video.cycle_run_changed_slot)
         self.cycle_run_image_request_signal.connect(self.main_window.video.on_cycle_run_image_requested_slot)
 
+        # CycleHandler MessageBox Signals/Slots
+        self.no_embryos_msg_box_show_signal.connect(self.on_no_more_embryos_found_slot)
+        self.no_embryos_msg_decision_signal.connect(self.on_msg_decision_made_slot)
+
     def run(self):
         self.logger.debug("PickAndPlate Cycle Handler Thread Starting...")
         while self.not_abort_flag:
@@ -147,7 +163,7 @@ class PickAndPlateCycleHandler(QtCore.QThread):
                     self.run_cycle_init()
                     self.cycle_init_flag = False
 
-                self.run_main_pick_and_plate_cycle()
+                self.check_if_no_embryos()
 
                 if self.cycle_end_flag:
                     self.cycle_end_flag = False
@@ -155,6 +171,9 @@ class PickAndPlateCycleHandler(QtCore.QThread):
                     self.move_x_y(0,0)
                     self.set_lights(0)
                     self.cycle_running_flag = False
+                else:
+                    self.run_main_pick_and_plate_cycle()
+
             else:
                 self.msleep(250)
 
@@ -164,7 +183,7 @@ class PickAndPlateCycleHandler(QtCore.QThread):
 
         while not self.data_received:
             self.cycle_run_image_request_signal.emit()
-            self.logger.info("Waiting for data")
+            #self.logger.info("Waiting for data")
             self.msleep(100)
 
         embryo_x_px = 0
@@ -180,12 +199,14 @@ class PickAndPlateCycleHandler(QtCore.QThread):
         # self.logger.info("Center Y: " + str(self.dish_center_px_y) + "\tY: " + str(embryo_y_px))
 
         if embryo_x_px and embryo_y_px:
+            self.no_embryo_count = 0
+
             embryo_x = (self.dish_x - ((embryo_x_px - self.dish_center_px_x) * self.mm_per_px))
             embryo_y = (self.dish_y + ((embryo_y_px - self.dish_center_px_y) * self.mm_per_px))
 
             traverse_height = 20
-            pick_depth = -18
-            place_depth = -13
+            pick_depth = -17
+            place_depth = -16
 
             self.logger.info("Center X: " + str(self.dish_x) + "\tX: " + str(embryo_x))
             self.logger.info("Center Y: " + str(self.dish_y) + "\tY: " + str(embryo_y))
@@ -214,8 +235,8 @@ class PickAndPlateCycleHandler(QtCore.QThread):
 
             # Move down in waste and dispel any extra fluid
             self.move_z(-5)
-            self.move_a(-50)
-            self.move_a(50)
+            self.move_a(-75)
+            self.move_a(75)
             self.move_z(traverse_height)
 
             # Increment well
@@ -229,60 +250,66 @@ class PickAndPlateCycleHandler(QtCore.QThread):
                 self.cycle_end_flag = True
 
         else:
+            self.no_embryo_count += 1
             self.data_received = False
             self.msleep(200)
 
-        # while self.cycle_running_flag:
-        #     self.msleep(500)
-        #     # self.move_x_y(dish_x, dish_y)
-            # self.move_z(-10)
-            # self.move_a(100)
-            # self.move_z(29)
-            #
-            # self.move_x_y(well_x, well_y)
-            # self.move_z(-10)
-            # self.move_a(-100)
-            # self.move_z(29)
-            #
-            # self.move_x_y(waste_x, waste_y)
-            # self.move_z(-10)
-            # self.move_a(-50)
-            # self.move_a(50)
-            # self.move_z(29)
-            #
-            #
-        # self.move_x_y(0, 0)
-        # self.set_lights(0)
+    ########## Handling for no more embryos ###########
+    def check_if_no_embryos(self):
+        run_once = True
+        if self.no_embryo_count > (NO_EMBRYO_THRESHOLD - 1):
+            self.button_state = BUTTON_WAIT
+            while self.button_state == BUTTON_WAIT:
+                if run_once:
+                    self.move_z(29)
+                    self.move_x_y(0,0)
+                    self.no_embryos_msg_box_show_signal.emit()
+                    run_once = False
 
-        # Run controller init for cycle run
-        # Set video controller to cycle mode
-        # Move controller to middle of dish, well A1, waste, and go back to home
-        # Retrieve initial image
-        # while not self.image_ready:
-        #     self.msleep(100)
+                self.set_lights(0)
+                self.msleep(1500)
+                self.set_lights(1000)
+                self.msleep(1500)
+
+            if self.button_state == BUTTON_CONTINUE:
+                self.no_embryo_count = 0
+            elif self.button_state == BUTTON_EXIT:
+                self.cycle_end_flag = True
+
+    def on_no_more_embryos_found_slot(self):
+        msg = QtGui.QMessageBox()
+        msg.setWindowTitle("No Embryos Detected")
+        msg.setText("Press \"Continue\" if plating is not complete.\nTo stop current plating run, press \"Exit\".")
+        msg.setModal(True)
+        msg.setWindowFlags(QtCore.Qt.WindowStaysOnTopHint)
+
+        # Make and add custom labeled buttons
+        continue_button = msg.addButton("Continue", QtGui.QMessageBox.ActionRole)
+        exit_button = msg.addButton("Exit", QtGui.QMessageBox.ActionRole)
+
+        # Set stylesheet
+        msg.setStyleSheet("QLabel{ color:rgb(202, 202, 202); }" +
+        "QMessageBox{ background-color:rgb(55, 55, 55);}" +
+        "QPushButton{ background-color:rgb(15,15,15); color:rgb(202, 202, 202);}")
+
+        # Move box to center of screen
+        box_size = msg.sizeHint()
+        screen_size = QtGui.QDesktopWidget().screen().rect()
+        msg.move((screen_size.width()/2 - box_size.width()/2), (screen_size.height()/2 - box_size.height()/2) )
+
+        msg.exec_()
+
+        clicked_button = msg.clickedButton()
+        if clicked_button == continue_button:
+            self.logger.info("Continue Pressed")
+            self.no_embryos_msg_decision_signal.emit(BUTTON_CONTINUE)
+        elif clicked_button == exit_button:
+            self.logger.info("Exit Pressed")
+            self.no_embryos_msg_decision_signal.emit(BUTTON_EXIT)
 
 
-        # Check if embryo's available for pick
-        ## If not, ask user if they want to swirl dish and continue
-            ## If they choose to continue, re-take image, wait for image ready, and return
-            ## Otherwise, set cycle_running flag to False run cycle_end function and return
-
-
-
-        # Retrieve keypoints from image and determine best pick
-        # Display full plate with detection and new pick / last pick images
-        # Pick up embryo
-        # Move to desired well
-
-        # self.image_ready = False
-        # Emit signal to capture new image
-
-        # Move to waste and expel
-
-        # while (not self.image_ready) or self.cycle_paused:
-        #     self.msleep(100)
-
-        # Determine if embryo is gone or if double pick occurred and update statistics
+    def on_msg_decision_made_slot(self, decision):
+        self.button_state = decision
 
     ########## Movement and Controller Methods ###########
     def move_x_y(self, x, y):
@@ -349,6 +376,7 @@ class PickAndPlateCycleHandler(QtCore.QThread):
     def set_cycle_run_flags_and_variables(self):
         # Control flags / vars
         self.cycle_paused = False
+        self.no_embryo_count = 0
 
         # Cal Vars
         self.dish_x = self.settings.value("system/system_calibration/dish_x_center").toFloat()[0]

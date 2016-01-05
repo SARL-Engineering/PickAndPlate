@@ -108,7 +108,7 @@ if __name__ == "__main__":
     myWindow.setFixedSize(800, 480)  # Set the window to resolution of of 4D Systems' 4DCAPE-70T beaglebone black shield
     myWindow.setWindowFlags(myWindow.windowFlags() |  # Sets the windows flags to:
                             QtCore.Qt.FramelessWindowHint |  # remove the border and frame on the application,
-                            QtCore.Qt.WindowStaysOnTopHint)  # and makes the window stay on top of all others
+                            QtCore.Qt.WindowStaysOnTopHint )  # and makes the window stay on top of all others
     myWindow.statusBar().setSizeGripEnabled(False)  # Disable the option to resize the window
     myWindow.show()  # Show the window in the application
 
