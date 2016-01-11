@@ -34,6 +34,8 @@ __status__ = "Development"
 from PyQt4 import QtCore, QtGui
 import logging
 from math import sqrt, pow, isnan
+import qimage2ndarray
+import cv2
 import time
 
 # Custom imports
@@ -66,6 +68,8 @@ class PickAndPlateCycleHandler(QtCore.QThread):
 
     no_embryos_msg_box_show_signal = QtCore.pyqtSignal()
     no_embryos_msg_decision_signal = QtCore.pyqtSignal(int)
+
+    pick_images_ready_signal = QtCore.pyqtSignal()
 
     def __init__(self, main_window):
         QtCore.QThread.__init__(self)
@@ -124,6 +128,8 @@ class PickAndPlateCycleHandler(QtCore.QThread):
 
         self.button_state = BUTTON_WAIT
         self.no_embryo_count = 0
+
+        self.pick_images_displayed = False
 
         # ########## Make signal/slot connections ##########
         self.connect_signals_to_slots()
@@ -202,6 +208,8 @@ class PickAndPlateCycleHandler(QtCore.QThread):
 
         if embryo_x_px and embryo_y_px:
             self.no_embryo_count = 0
+
+            self.make_current_and_last_pick_images(embryo_x_px, embryo_y_px)
 
             embryo_x = (self.dish_x - ((embryo_x_px - self.dish_center_px_x) * self.mm_per_px))
             embryo_y = (self.dish_y + ((embryo_y_px - self.dish_center_px_y) * self.mm_per_px))
@@ -348,6 +356,39 @@ class PickAndPlateCycleHandler(QtCore.QThread):
             # self.logger.info("Waiting for init complete")
             self.msleep(150)
 
+    ########## Image Methods ###########
+    def make_current_and_last_pick_images(self, embryo_x, embryo_y):
+        self.last_pick_qimage = self.current_pick_qimage
+        current_pick_raw = self.crop_image(self.cropped_only_raw, embryo_x, embryo_y)
+        current_pick_raw = cv2.resize(current_pick_raw, (150, 150))
+        self.current_pick_qimage = self.convert_to_qimage(current_pick_raw)
+
+        self.pick_images_displayed = False
+        self.pick_images_ready_signal.emit()
+        while not self.pick_images_displayed:
+            self.msleep(50)
+
+    def on_pick_images_displayed_slot(self):
+        self.pick_images_displayed = True
+
+    @staticmethod
+    def convert_to_qimage(input_matrix):
+        return qimage2ndarray.array2qimage(input_matrix)
+
+
+    @staticmethod
+    def crop_image(input_matrix, embryo_x, embryo_y):
+        side_length = 50
+
+        x1 = embryo_x - (side_length/2)
+        x2 = embryo_x + (side_length/2)
+        y1 = embryo_y - (side_length/2)
+        y2 = embryo_y + (side_length/2)
+
+        cropped = input_matrix[y1:y2, x1:x2]
+
+        return cropped
+
 
     ##########  ###########
     def run_cycle_init(self):
@@ -396,7 +437,7 @@ class PickAndPlateCycleHandler(QtCore.QThread):
         self.cur_plate_y = self.a1_y
 
     def on_video_requested_image_ready_slot(self):
-        self.cropped_only_raw = self.main_window.video.cropped_only_raw
+        self.cropped_only_raw = self.main_window.video.cropped_only_raw.copy()
         self.current_frame_keypoints = self.main_window.video.keypoints
         self.data_received = True
 

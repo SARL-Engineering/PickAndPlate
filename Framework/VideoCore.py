@@ -31,13 +31,13 @@ __status__ = "Development"
 # Imports
 #####################################
 # Python native imports
-from PyQt4 import QtCore, QtGui
+from PyQt4 import QtCore
 import logging
 import cv2
 import numpy
 import qimage2ndarray
 import subprocess
-from math import isnan
+
 
 # Custom imports
 
@@ -361,17 +361,17 @@ class PickAndPlateVideo(QtCore.QThread):
         if  not self.wait_for_image_req:
             self.wait_for_image_req = True
 
-            frame = cv2.cvtColor(self.raw_frame, cv2.COLOR_RGB2GRAY)
-            return_val, frame = cv2.threshold(frame, self.min_thresh, 255, cv2.cv.CV_THRESH_BINARY)
-            mask_frame = numpy.zeros((self.y_res, self.x_res), numpy.uint8)
-            cv2.circle(mask_frame, (self.x_center, self.y_center), (self.crop_dim_half - self.usable_offset), 255, -1)
-            frame = cv2.bitwise_and(frame, mask_frame)
-            frame = self.masked_detect_and_overlay(frame, self.raw_frame)
-            frame = self.crop_image(frame)
+            frame = cv2.cvtColor(self.raw_frame, cv2.COLOR_RGB2GRAY)  # convert color image to grey
+            return_val, frame = cv2.threshold(frame, self.min_thresh, 255, cv2.cv.CV_THRESH_BINARY)  # apply binary threshold to image
+            mask_frame = numpy.zeros((self.y_res, self.x_res), numpy.uint8)  # Setup a masking frame the size of the input frame with zeros
+            cv2.circle(mask_frame, (self.x_center, self.y_center), (self.crop_dim_half - self.usable_offset), 255, -1)  # Fill the mask with 1's for a circle where the dish is in the image
+            frame = cv2.bitwise_and(frame, mask_frame)  # Apply the mask to the input frame
+            frame = self.masked_detect_and_overlay(frame, self.raw_frame)  # Send the masked frame to blob detection
+            frame = self.crop_image(frame)  # Crop image to size for display on gui
 
             # Determine which embryo to pick
             try:
-                self.cropped_only_raw = frame
+                self.cropped_only_raw = self.raw_frame
 
                 resized = cv2.resize(frame, (200, 200))
                 self.cycle_monitor_qimage = self.convert_to_qimage(resized)

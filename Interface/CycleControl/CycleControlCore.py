@@ -55,6 +55,8 @@ class CycleControl(QtCore.QThread):
     pause_cycle_signal = QtCore.pyqtSignal()
     resume_cycle_signal = QtCore.pyqtSignal()
 
+    pick_images_displayed = QtCore.pyqtSignal()
+
     def __init__(self, main_window, master):
         QtCore.QThread.__init__(self)
 
@@ -115,6 +117,10 @@ class CycleControl(QtCore.QThread):
 
         # CycleHandler to CycleControl
         self.main_window.cycle_handler.interface_cycle_stop_signal.connect(self.on_stop_button_pressed_slot)
+        self.main_window.cycle_handler.pick_images_ready_signal.connect(self.on_pick_images_ready_slot)
+
+        # CycleControl to CycleHandler
+        self.pick_images_displayed.connect(self.main_window.cycle_handler.on_pick_images_displayed_slot)
 
     def set_labels_to_defaults(self):
         self.cycle_mon_label
@@ -163,3 +169,18 @@ class CycleControl(QtCore.QThread):
             self.cycle_mon_label.setPixmap(QtGui.QPixmap.fromImage(self.main_window.video.cycle_monitor_qimage))
         except:
             pass
+
+    def on_pick_images_ready_slot(self):
+        try:
+            self.last_pick_label.setPixmap(QtGui.QPixmap.fromImage(
+                    self.main_window.cycle_handler.last_pick_qimage))
+        except:
+            pass
+
+        try:
+            self.current_pick_label.setPixmap(QtGui.QPixmap.fromImage(
+                    self.main_window.cycle_handler.current_pick_qimage))
+        except:
+            pass
+
+        self.pick_images_displayed.emit()
