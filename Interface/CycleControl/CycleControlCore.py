@@ -102,6 +102,18 @@ class CycleControl(QtCore.QThread):
         # ########## Set labels to defaults ##########
         self.set_labels_to_defaults()
 
+        # ########## Hide Currently Unused Gui Elements ##########
+        self.is_chorionated_button.setVisible(False)
+        self.current_pick_num_label.setVisible(False)
+        self.total_picked_num_label.setVisible(False)
+        self.mispick_label.setVisible(False)
+        self.double_pick_label.setVisible(False)
+        self.total_detected_label.setVisible(False)
+        self.time_elapsed_label.setVisible(False)
+        self.time_remaining_label.setVisible(False)
+        self.success_rate_label.setVisible(False)
+
+
     def connect_signals_to_slots(self):
         self.start_button.clicked.connect(self.on_start_button_pressed_slot)
         self.pause_resume_button.clicked.connect(self.on_pause_resume_button_pressed_slot)
@@ -118,18 +130,20 @@ class CycleControl(QtCore.QThread):
         # CycleHandler to CycleControl
         self.main_window.cycle_handler.interface_cycle_stop_signal.connect(self.on_stop_button_pressed_slot)
         self.main_window.cycle_handler.pick_images_ready_signal.connect(self.on_pick_images_ready_slot)
+        self.main_window.cycle_handler.pick_positions_ready_signal.connect(self.on_pick_locations_updated_slot)
 
         # CycleControl to CycleHandler
         self.pick_images_displayed.connect(self.main_window.cycle_handler.on_pick_images_displayed_slot)
+
 
     def set_labels_to_defaults(self):
         self.cycle_mon_label
 
         self.last_pick_label
-        self.last_pick_pos_label.setText("Waiting for start")
+        self.last_pick_pos_label.setText("Waiting for pick")
 
         self.current_pick_label
-        self.current_pick_pos_label.setText("Waiting for start")
+        self.current_pick_pos_label.setText("Waiting for pick")
 
         self.current_pick_num_label.setText("N/A")
         self.total_picked_num_label.setText("N/A")
@@ -184,3 +198,10 @@ class CycleControl(QtCore.QThread):
             pass
 
         self.pick_images_displayed.emit()
+
+    def on_pick_locations_updated_slot(self, x, y):
+        x_text = "X: {0:.3f}".format(x)
+        y_text = "Y: {0:.3f}".format(y)
+
+        self.last_pick_pos_label.setText(self.current_pick_pos_label.text())
+        self.current_pick_pos_label.setText(x_text + " | " + y_text)

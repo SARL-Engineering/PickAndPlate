@@ -254,7 +254,7 @@ QPushButton{
        <enum>QTabWidget::Rounded</enum>
       </property>
       <property name="currentIndex">
-       <number>2</number>
+       <number>0</number>
       </property>
       <widget class="QWidget" name="tab">
        <attribute name="title">
@@ -937,7 +937,7 @@ QPushButton{
                  </font>
                 </property>
                 <property name="text">
-                 <string>Total Picked:</string>
+                 <string>Plated Embryos:</string>
                 </property>
                </widget>
               </item>
@@ -1465,8 +1465,8 @@ QToolBox::tab:selected{
                   <rect>
                    <x>0</x>
                    <y>0</y>
-                   <width>736</width>
-                   <height>258</height>
+                   <width>362</width>
+                   <height>177</height>
                   </rect>
                  </property>
                  <attribute name="label">
@@ -2006,8 +2006,8 @@ QToolBox::tab:selected{
                   <rect>
                    <x>0</x>
                    <y>0</y>
-                   <width>478</width>
-                   <height>194</height>
+                   <width>320</width>
+                   <height>178</height>
                   </rect>
                  </property>
                  <attribute name="label">
@@ -2197,8 +2197,8 @@ p, li { white-space: pre-wrap; }
                   <rect>
                    <x>0</x>
                    <y>0</y>
-                   <width>478</width>
-                   <height>194</height>
+                   <width>316</width>
+                   <height>147</height>
                   </rect>
                  </property>
                  <attribute name="label">

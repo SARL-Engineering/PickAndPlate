@@ -70,6 +70,7 @@ class PickAndPlateCycleHandler(QtCore.QThread):
     no_embryos_msg_decision_signal = QtCore.pyqtSignal(int)
 
     pick_images_ready_signal = QtCore.pyqtSignal()
+    pick_positions_ready_signal = QtCore.pyqtSignal(float, float)
 
     def __init__(self, main_window):
         QtCore.QThread.__init__(self)
@@ -130,6 +131,16 @@ class PickAndPlateCycleHandler(QtCore.QThread):
         self.no_embryo_count = 0
 
         self.pick_images_displayed = False
+
+        # Statistical variables
+        self.current_pick_number = 0
+        self.total_plated = 0
+        self.mispicks = 0
+        self.double_picks = 0
+        self.total_detected = 0
+        self.time_elapsed = 0
+        self.time_remaining = 0
+        self.success_rate = 0
 
         # ########## Make signal/slot connections ##########
         self.connect_signals_to_slots()
@@ -209,10 +220,11 @@ class PickAndPlateCycleHandler(QtCore.QThread):
         if embryo_x_px and embryo_y_px:
             self.no_embryo_count = 0
 
-            self.make_current_and_last_pick_images(embryo_x_px, embryo_y_px)
-
             embryo_x = (self.dish_x - ((embryo_x_px - self.dish_center_px_x) * self.mm_per_px))
             embryo_y = (self.dish_y + ((embryo_y_px - self.dish_center_px_y) * self.mm_per_px))
+
+            self.pick_positions_ready_signal.emit(embryo_x, embryo_y)
+            self.make_current_and_last_pick_images(embryo_x_px, embryo_y_px)
 
             traverse_height = 20
             pick_depth = -17
@@ -378,7 +390,7 @@ class PickAndPlateCycleHandler(QtCore.QThread):
 
     @staticmethod
     def crop_image(input_matrix, embryo_x, embryo_y):
-        side_length = 50
+        side_length = 75
 
         x1 = embryo_x - (side_length/2)
         x2 = embryo_x + (side_length/2)
@@ -389,6 +401,7 @@ class PickAndPlateCycleHandler(QtCore.QThread):
 
         return cropped
 
+    ########## General Informational Display Methods ###########
 
     ##########  ###########
     def run_cycle_init(self):
