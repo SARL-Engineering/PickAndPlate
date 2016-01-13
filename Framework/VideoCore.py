@@ -248,17 +248,15 @@ class PickAndPlateVideo(QtCore.QThread):
             self.show_cycle_run()
 
     def show_detection_calibration(self):
-        if self.setup_params_once:
-            self.setup_blob_params()
-            self.setup_params_once = False
 
-            self.min_thresh = self.settings.value("system/detection_calibration/min_binary_thresh").toInt()[0]
-            self.x_res = self.settings.value("system/system_settings/camera_res_width").toInt()[0]
-            self.y_res = self.settings.value("system/system_settings/camera_res_height").toInt()[0]
-            self.x_center = self.settings.value("system/system_calibration/crop_x_center").toInt()[0]
-            self.y_center = self.settings.value("system/system_calibration/crop_y_center").toInt()[0]
-            self.crop_dim_half = (self.settings.value("system/system_calibration/crop_dimension").toInt()[0] / 2)
-            self.usable_offset = self.settings.value("system/system_calibration/usable_area_offset").toInt()[0]
+        self.setup_blob_params()
+        self.min_thresh = self.settings.value("system/detection_calibration/min_binary_thresh").toInt()[0]
+        self.x_res = self.settings.value("system/system_settings/camera_res_width").toInt()[0]
+        self.y_res = self.settings.value("system/system_settings/camera_res_height").toInt()[0]
+        self.x_center = self.settings.value("system/system_calibration/crop_x_center").toInt()[0]
+        self.y_center = self.settings.value("system/system_calibration/crop_y_center").toInt()[0]
+        self.crop_dim_half = (self.settings.value("system/system_calibration/crop_dimension").toInt()[0] / 2)
+        self.usable_offset = self.settings.value("system/system_calibration/usable_area_offset").toInt()[0]
 
 
         frame = numpy.array([])

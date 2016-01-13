@@ -31,7 +31,7 @@ __status__ = "Development"
 # Imports
 #####################################
 # Python native imports
-from PyQt4 import QtCore
+from PyQt4 import QtCore, QtGui
 import logging
 
 # Custom imports
@@ -55,6 +55,9 @@ class SystemCalibration(QtCore.QObject):
     z_move_relative_request_signal = QtCore.pyqtSignal(float)
     z_move_request_signal = QtCore.pyqtSignal(float)
     light_change_signal = QtCore.pyqtSignal(int)
+    motor_state_change_signal = QtCore.pyqtSignal(int)
+
+    setting_saved_messagebox_show_signal = QtCore.pyqtSignal()
 
     def __init__(self, main_window, master):
         QtCore.QObject.__init__(self)
@@ -101,6 +104,8 @@ class SystemCalibration(QtCore.QObject):
 
         self.lights_on_button = self.main_window.alignment_lights_on_button
         self.lights_off_button = self.main_window.alignment_lights_off_button
+        self.motors_on_button = self.main_window.alignment_motors_on_button
+        self.motors_off_button = self.main_window.alignment_motors_off_button
 
         self.cal_preview_button = self.main_window.system_calibration_image_preview_button
 
@@ -156,6 +161,10 @@ class SystemCalibration(QtCore.QObject):
         self.full_home_button.clicked.connect(self.on_do_full_homing_clicked_slot)
         self.lights_on_button.clicked.connect(self.on_lights_on_clicked_slot)
         self.lights_off_button.clicked.connect(self.on_lights_off_clicked_slot)
+        self.motors_on_button.clicked.connect(self.on_motors_on_clicked_slot)
+        self.motors_off_button.clicked.connect(self.on_motors_off_clicked_slot)
+
+        self.setting_saved_messagebox_show_signal.connect(self.on_setting_saved_show_message_box_slot)
 
         # ########## External connections ##########
         self.system_location_request_signal.connect(self.main_window.controller.broadcast_location_slot)
@@ -169,6 +178,7 @@ class SystemCalibration(QtCore.QObject):
 
         self.full_home_button.clicked.connect(self.main_window.controller.on_full_system_homing_requested_slot)
         self.light_change_signal.connect(self.main_window.controller.on_light_change_request_signal_slot)
+        self.motor_state_change_signal.connect(self.main_window.controller.on_motor_state_change_request_signal_slot)
 
 
     def save_non_pick_head_changed_values_to_settings_slot(self):
@@ -198,73 +208,109 @@ class SystemCalibration(QtCore.QObject):
         self.request_complete = False
         resolution = float(self.res_combo_box.currentText())
         self.x_y_move_relative_request_signal.emit(resolution, 0)
+        self.motor_state_change_signal.emit(True)
 
     def on_x_negative_clicked_slot(self):
         self.request_complete = False
         resolution = float(self.res_combo_box.currentText())
         self.x_y_move_relative_request_signal.emit(-resolution, 0)
+        self.motor_state_change_signal.emit(True)
 
     def on_y_positive_clicked_slot(self):
         self.request_complete = False
         resolution = float(self.res_combo_box.currentText())
         self.x_y_move_relative_request_signal.emit(0, resolution)
-
+        self.motor_state_change_signal.emit(True)
 
     def on_y_negative_clicked_slot(self):
         self.request_complete = False
         resolution = float(self.res_combo_box.currentText())
         self.x_y_move_relative_request_signal.emit(0, -resolution)
+        self.motor_state_change_signal.emit(True)
 
     def on_z_positive_clicked_slot(self):
         self.request_complete = False
         resolution = float(self.res_combo_box.currentText())
         self.z_move_relative_request_signal.emit(resolution)
+        self.motor_state_change_signal.emit(True)
 
     def on_z_negative_clicked_slot(self):
         self.request_complete = False
         resolution = float(self.res_combo_box.currentText())
         self.z_move_relative_request_signal.emit(-resolution)
+        self.motor_state_change_signal.emit(True)
 
     def on_x_y_z_zero_clicked_slot(self):
         if self.tinyg_full_home_done:
             self.z_move_request_signal.emit(29)
             self.x_y_move_request_signal.emit(0 ,0)
             self.z_move_request_signal.emit(0)
+            self.motor_state_change_signal.emit(True)
 
     def on_z_max_clicked_slot(self):
         if self.tinyg_full_home_done:
             self.request_complete = False
             self.z_move_request_signal.emit(29)
+            self.motor_state_change_signal.emit(True)
 
     def on_do_full_homing_clicked_slot(self):
         self.tinyg_full_home_done = True
+        self.motor_state_change_signal.emit(True)
 
-    # TODO : Settings Saved Messageboxes!!!!!
     def on_save_precision_z_center_clicked_slot(self):
         self.settings.setValue("system/system_calibration/precision_z_x_center", self.tinyg_x_location)
         self.settings.setValue("system/system_calibration/precision_z_y_center", self.tinyg_y_location)
-        self.logger.debug("Precision Z Center Saved")
+        self.setting_saved_messagebox_show_signal.emit()
 
     def on_save_dish_center_clicked_slot(self):
         self.settings.setValue("system/system_calibration/dish_x_center", self.tinyg_x_location)
         self.settings.setValue("system/system_calibration/dish_y_center", self.tinyg_y_location)
-        self.logger.debug("Dish Center Saved")
+        self.setting_saved_messagebox_show_signal.emit()
 
     def on_save_a1_center_clicked_slot(self):
         self.settings.setValue("system/system_calibration/a1_x_center", self.tinyg_x_location)
         self.settings.setValue("system/system_calibration/a1_y_center", self.tinyg_y_location)
-        self.logger.debug("A1 Center Saved")
+        self.setting_saved_messagebox_show_signal.emit()
 
     def on_save_waste_center_clicked_slot(self):
         self.settings.setValue("system/system_calibration/waste_x_center", self.tinyg_x_location)
         self.settings.setValue("system/system_calibration/waste_y_center", self.tinyg_y_location)
-        self.logger.debug("Waste Center Saved")
+        self.setting_saved_messagebox_show_signal.emit()
+
+    @staticmethod
+    def on_setting_saved_show_message_box_slot():
+        msg = QtGui.QMessageBox()
+        msg.setWindowTitle("Location Saved Successfully!")
+        msg.setText("Press \"Continue\" to return to adjusting settings.")
+        msg.setModal(True)
+        msg.setWindowFlags(QtCore.Qt.WindowStaysOnTopHint)
+
+        # Make and add custom labeled buttons
+        msg.addButton("Continue", QtGui.QMessageBox.ActionRole)
+
+        # Set stylesheet
+        msg.setStyleSheet("QLabel{ color:rgb(202, 202, 202); }" +
+        "QMessageBox{ background-color:rgb(55, 55, 55);}" +
+        "QPushButton{ background-color:rgb(15,15,15); color:rgb(202, 202, 202);}")
+
+        # Move box to center of screen
+        box_size = msg.sizeHint()
+        screen_size = QtGui.QDesktopWidget().screen().rect()
+        msg.move((screen_size.width()/2 - box_size.width()/2), (screen_size.height()/2 - box_size.height()/2) )
+
+        msg.exec_()
 
     def on_lights_on_clicked_slot(self):
         self.light_change_signal.emit(1000)
 
     def on_lights_off_clicked_slot(self):
         self.light_change_signal.emit(0)
+
+    def on_motors_on_clicked_slot(self):
+        self.motor_state_change_signal.emit(True)
+
+    def on_motors_off_clicked_slot(self):
+        self.motor_state_change_signal.emit(False)
 
     def on_system_location_changed_slot(self, x, y, z, a):
         self.tinyg_x_location = x

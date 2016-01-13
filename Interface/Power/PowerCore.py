@@ -32,6 +32,7 @@ __status__ = "Development"
 #####################################
 # Python native imports
 from PyQt4 import QtCore, QtGui
+import time
 import subprocess
 
 # Custom imports
@@ -42,6 +43,8 @@ import subprocess
 reboot_command = "sudo reboot"
 shutdown_command = "sudo poweroff"
 
+
+TERMINATE_DELAY = 8  # Delay in seconds before all threads that haven't ended are terminated
 
 #####################################
 # Power Class Definition
@@ -72,7 +75,6 @@ class Power(QtCore.QObject):
         self.threads.append(self.master.status)
         self.threads.append(self.master.tables_tab)
 
-
         # ########## Setup signal and slot connections ##########
         self.connect_signals_to_slots()
 
@@ -89,8 +91,28 @@ class Power(QtCore.QObject):
     def kill_all_threads(self):
         self.kill_threads_signal.emit()
 
-        for thread in self.threads:
-            thread.wait()
+        all_threads_killed = False
+        num_threads_running = 0
+        terminate_has_run = False
+
+        start_time = time.time()
+        while not all_threads_killed:
+            for thread in self.threads:
+                if thread.isRunning():
+                    num_threads_running += 1
+
+            if num_threads_running > 0:
+                num_threads_running = 0
+
+                if not terminate_has_run:
+                    if (time.time()-start_time) > TERMINATE_DELAY:
+                        for thread in self.threads:
+                            if thread.isRunning():
+                                print "Terminated"
+                                thread.terminate()
+                        terminate_has_run = True
+            else:
+                all_threads_killed = True
 
     def on_reboot_button_pressed_slot(self):
         self.kill_all_threads()

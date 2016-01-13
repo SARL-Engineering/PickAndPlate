@@ -49,6 +49,9 @@ class DetectionCalibration(QtCore.QObject):
     detection_image_preview_options_changed_signal = QtCore.pyqtSignal(int, str)
     image_displayed_signal = QtCore.pyqtSignal()
 
+    light_change_signal = QtCore.pyqtSignal(int)
+    motor_state_change_signal = QtCore.pyqtSignal(int)
+
     def __init__(self, main_window, master):
         QtCore.QObject.__init__(self)
 
@@ -97,6 +100,11 @@ class DetectionCalibration(QtCore.QObject):
 
         self.image_preview_label = self.main_window.detection_calibration_image_preview_label
 
+        self.lights_on_button = self.main_window.detection_lights_on_button
+        self.lights_off_button = self.main_window.detection_lights_off_button
+        self.motors_on_button = self.main_window.detection_motors_on_button
+        self.motors_off_button = self.main_window.detection_motors_off_button
+
         # ########## Load settings and set widgets to values ##########
         self.load_and_show_settings()
 
@@ -141,6 +149,15 @@ class DetectionCalibration(QtCore.QObject):
 
         self.main_window.video.requested_image_ready_signal.connect(self.on_requested_image_ready_slot)
         self.main_window.video.number_embryos_detected_signal.connect(self.on_detected_embryos_number_changed_slot)
+
+        self.lights_on_button.clicked.connect(self.on_lights_on_clicked_slot)
+        self.lights_off_button.clicked.connect(self.on_lights_off_clicked_slot)
+        self.motors_on_button.clicked.connect(self.on_motors_on_clicked_slot)
+        self.motors_off_button.clicked.connect(self.on_motors_off_clicked_slot)
+
+        # External
+        self.light_change_signal.connect(self.main_window.controller.on_light_change_request_signal_slot)
+        self.motor_state_change_signal.connect(self.main_window.controller.on_motor_state_change_request_signal_slot)
 
     def save_changed_values_to_settings_slot(self):
         self.settings.setValue("system/detection_calibration/min_binary_thresh", self.min_binary_thresh_sb.value())
@@ -236,3 +253,15 @@ class DetectionCalibration(QtCore.QObject):
 
     def on_detected_embryos_number_changed_slot(self, number):
         self.num_detected_label.setText(str(number))
+
+    def on_lights_on_clicked_slot(self):
+        self.light_change_signal.emit(1000)
+
+    def on_lights_off_clicked_slot(self):
+        self.light_change_signal.emit(0)
+
+    def on_motors_on_clicked_slot(self):
+        self.motor_state_change_signal.emit(True)
+
+    def on_motors_off_clicked_slot(self):
+        self.motor_state_change_signal.emit(False)

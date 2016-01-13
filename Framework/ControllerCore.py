@@ -236,6 +236,12 @@ class SerialHandler(QtCore.QThread):
         #self.serial_out_queue.append(self.convert_to_json({'zjm':300}))
         # self.serial_out_queue.append(self.convert_to_json({'mt':20}))
 
+    def on_motor_state_change_requested_slot(self, state):
+        if state:
+            self.serial_out_queue.append(self.convert_to_json({'me': None})) # Keep motors on for 30 minutes
+        else:
+            self.serial_out_queue.append(self.convert_to_json({'md': None}))
+
     def on_dump_tinyg_settings_dump_slot(self):
         self.serial_out_queue.append(self.convert_to_json({'sys': None}))
         self.serial_out_queue.append(self.convert_to_json({'1': None}))
@@ -247,7 +253,6 @@ class SerialHandler(QtCore.QThread):
         self.serial_out_queue.append(self.convert_to_json({'4': None}))
         self.serial_out_queue.append(self.convert_to_json({'a': None}))
         self.serial_out_queue.append(self.convert_to_json({'p1': None}))
-
 
     def on_light_change_requested_slot(self, brightness):
         if brightness > 0:
@@ -282,10 +287,8 @@ class SerialHandler(QtCore.QThread):
         self.on_relative_position_change_requested_slot(0, -10, 0, 0)
         self.serial_out_queue.append(self.convert_to_json({'gc': 'G28.2 Y0'}))
 
-
     def on_a_homing_requested_slot(self):
         self.serial_out_queue.append(self.convert_to_json({'gc': 'G28.2 A0'}))
-
 
     def on_absolute_position_change_requested_slot(self, x, y, z, a):
         out_string = 'G90 G0'
@@ -348,6 +351,7 @@ class PickAndPlateController(QtCore.QThread):
     tinyg_a_home_signal = QtCore.pyqtSignal()
     tinyg_light_change_signal = QtCore.pyqtSignal(int)
     tinyg_dump_settings_signal = QtCore.pyqtSignal()
+    tinyg_motor_state_change_signal = QtCore.pyqtSignal(int)
     tinyg_location_update_signal = QtCore.pyqtSignal(float, float, float, float)
 
     controller_command_complete_signal = QtCore.pyqtSignal()
@@ -394,6 +398,7 @@ class PickAndPlateController(QtCore.QThread):
     def connect_signals_to_slots(self):
         #PickAndPlateController to SerialHandler
         self.tinyg_light_change_signal.connect(self.serial_handler.on_light_change_requested_slot)
+        self.tinyg_motor_state_change_signal.connect(self.serial_handler.on_motor_state_change_requested_slot)
         self.tinyg_z_home_signal.connect(self.serial_handler.on_z_homing_requested_slot)
         self.tinyg_x_y_home_signal.connect(self.serial_handler.on_x_y_homing_requested_slot)
         self.tinyg_x_y_precision_home_signal.connect(self.serial_handler.on_x_y_precision_homing_requested_slot)
@@ -450,6 +455,8 @@ class PickAndPlateController(QtCore.QThread):
                     self.a_axis_home_request()
                 elif current_command['Command'] == 'Light Change':
                     self.light_change_requested(current_command['Brightness'])
+                elif current_command['Command'] == 'Motor State Change':
+                    self.motor_state_change_requested(current_command['State'])
             else:
                 self.msleep(50)
 
@@ -464,6 +471,18 @@ class PickAndPlateController(QtCore.QThread):
     def light_change_requested(self, brightness):
         self.tinyg_command_processed = False
         self.tinyg_light_change_signal.emit(brightness)
+
+        while not self.tinyg_command_processed:
+            self.msleep(50)
+
+        self.controller_command_complete_signal.emit()
+
+    def on_motor_state_change_request_signal_slot(self, state):
+        self.command_queue.append({'Command':'Motor State Change', 'State':state})
+
+    def motor_state_change_requested(self, state):
+        self.tinyg_command_processed = False
+        self.tinyg_motor_state_change_signal.emit(state)
 
         while not self.tinyg_command_processed:
             self.msleep(50)

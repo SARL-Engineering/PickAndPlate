@@ -61,6 +61,7 @@ class PickAndPlateCycleHandler(QtCore.QThread):
     z_move_request_signal = QtCore.pyqtSignal(float)
     a_move_request_signal = QtCore.pyqtSignal(int)
     light_change_signal = QtCore.pyqtSignal(int)
+    motor_state_change_signal = QtCore.pyqtSignal(int)
 
     cycle_run_state_change_signal = QtCore.pyqtSignal(bool)
     cycle_run_image_request_signal = QtCore.pyqtSignal()
@@ -155,6 +156,7 @@ class PickAndPlateCycleHandler(QtCore.QThread):
         self.a_move_request_signal.connect(self.main_window.controller.on_a_axis_move_requested_slot)
         self.full_system_home_request_signal.connect(self.main_window.controller.on_full_system_homing_requested_slot)
         self.light_change_signal.connect(self.main_window.controller.on_light_change_request_signal_slot)
+        self.motor_state_change_signal.connect(self.main_window.controller.on_motor_state_change_request_signal_slot)
 
         # Controller to Cycle Handler
         self.main_window.controller.tinyg_location_update_signal.connect(self.on_system_location_changed_slot)
@@ -172,7 +174,7 @@ class PickAndPlateCycleHandler(QtCore.QThread):
         # CycleHandler MessageBox Signals/Slots
         self.no_embryos_msg_box_show_signal.connect(self.on_no_more_embryos_found_slot)
         self.no_embryos_msg_decision_signal.connect(self.on_msg_decision_made_slot)
-
+# TODO: FIGURE OUT WHY I CAN"T RUN MULTIPLE CYCLES
     def run(self):
         self.logger.debug("PickAndPlate Cycle Handler Thread Starting...")
         while self.not_abort_flag:
@@ -189,6 +191,7 @@ class PickAndPlateCycleHandler(QtCore.QThread):
                     self.move_x_y(0,0)
                     self.set_lights(0)
                     self.interface_cycle_stop_signal.emit()
+                    self.set_motors(False)
                     self.cycle_running_flag = False
                 else:
                     self.run_main_pick_and_plate_cycle()
@@ -202,7 +205,7 @@ class PickAndPlateCycleHandler(QtCore.QThread):
 
         while not self.data_received:
             self.cycle_run_image_request_signal.emit()
-            #self.logger.info("Waiting for data")
+            self.set_motors(True)
             self.msleep(100)
 
         embryo_x_px = 0
@@ -292,10 +295,11 @@ class PickAndPlateCycleHandler(QtCore.QThread):
                 self.msleep(1500)
                 self.set_lights(1000)
                 self.msleep(1500)
+                self.set_motors(True)
 
             if self.button_state == BUTTON_CONTINUE:
                 self.no_embryo_count = 0
-            elif self.button_state == BUTTON_EXIT:
+            else:
                 self.cycle_end_flag = True
 
     def on_no_more_embryos_found_slot(self):
@@ -361,6 +365,13 @@ class PickAndPlateCycleHandler(QtCore.QThread):
             # self.logger.info("Waiting for lights")
             self.msleep(150)
 
+    def set_motors(self, state):
+        self.controller_command_complete = False
+        self.motor_state_change_signal.emit(state)
+        while not self.controller_command_complete:
+            # self.logger.info("Waiting for lights")
+            self.msleep(150)
+
     def run_hardware_init(self):
         self.init_command_complete = False
         self.full_system_home_request_signal.emit()
@@ -405,6 +416,7 @@ class PickAndPlateCycleHandler(QtCore.QThread):
 
     ##########  ###########
     def run_cycle_init(self):
+        self.set_motors(True)
         self.cycle_run_state_change_signal.emit(True)
         self.cycle_run_image_request_signal.emit()
         self.set_cycle_run_flags_and_variables()
@@ -450,7 +462,7 @@ class PickAndPlateCycleHandler(QtCore.QThread):
         self.cur_plate_y = self.a1_y
 
     def on_video_requested_image_ready_slot(self):
-        self.cropped_only_raw = self.main_window.video.cropped_only_raw.copy()
+        self.cropped_only_raw = self.main_window.video.cropped_only_raw # USED TO BE A .COPY HERE
         self.current_frame_keypoints = self.main_window.video.keypoints
         self.data_received = True
 
