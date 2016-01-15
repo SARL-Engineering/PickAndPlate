@@ -80,7 +80,7 @@ class FrameGrabber(QtCore.QThread):
         while self.not_abort:
             if self.process_continuous:
                 self.video_camera.grab()
-                self.msleep(20)
+                self.msleep(15)
             elif self.process_single:
                 self.video_camera.grab()
                 self.process_single = False

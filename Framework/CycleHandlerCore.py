@@ -143,6 +143,11 @@ class PickAndPlateCycleHandler(QtCore.QThread):
         self.time_remaining = 0
         self.success_rate = 0
 
+        #Timing variables
+        self.start_time = 0
+        self.stop_time = 0
+
+
         # ########## Make signal/slot connections ##########
         self.connect_signals_to_slots()
 
@@ -181,11 +186,13 @@ class PickAndPlateCycleHandler(QtCore.QThread):
             if self.cycle_running_flag:
                 if self.cycle_init_flag:
                     self.run_cycle_init()
+                    self.start_time = time.time()
                     self.cycle_init_flag = False
 
                 self.check_if_no_embryos()
 
                 if self.cycle_end_flag:
+                    self.stop_time = time.time()
                     self.cycle_end_flag = False
                     self.move_z(29)
                     self.move_x_y(0,0)
@@ -193,6 +200,8 @@ class PickAndPlateCycleHandler(QtCore.QThread):
                     self.interface_cycle_stop_signal.emit()
                     self.set_motors(False)
                     self.cycle_running_flag = False
+
+                    self.logger.info("Cycle completed in " + str((self.stop_time-self.start_time)/60) + " minutes.")
                 else:
                     self.run_main_pick_and_plate_cycle()
 
@@ -384,6 +393,8 @@ class PickAndPlateCycleHandler(QtCore.QThread):
         self.last_pick_qimage = self.current_pick_qimage
         current_pick_raw = self.crop_image(self.cropped_only_raw, embryo_x, embryo_y)
         current_pick_raw = cv2.resize(current_pick_raw, (150, 150))
+        cv2.line(current_pick_raw, (0, 150/2), (150, 150/2), (255, 0, 0), 1)
+        cv2.line(current_pick_raw, (150/2, 0), (150/2, 150), (255, 0, 0), 1)
         self.current_pick_qimage = self.convert_to_qimage(current_pick_raw)
 
         self.pick_images_displayed = False

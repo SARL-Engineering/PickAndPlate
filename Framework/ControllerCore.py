@@ -207,9 +207,30 @@ class SerialHandler(QtCore.QThread):
                 self.tinyg_serial_buffer_remaining = int(processed_json['qr'])
 
             elif 'r' in processed_json:
+                special_response = processed_json['r']
+                if 'sys' in special_response:
+                    self.logger.debug("Sys:" + str(special_response['sys']))
+                if '1' in special_response:
+                    self.logger.debug("1:" + str(special_response['1']))
+                if 'x' in special_response:
+                    self.logger.debug("x:" + str(special_response['x']))
+                if '2' in special_response:
+                    self.logger.debug("2:" + str(special_response['2']))
+                if 'y' in special_response:
+                    self.logger.debug("y:" + str(special_response['y']))
+                if '3' in special_response:
+                    self.logger.debug("3:" + str(special_response['3']))
+                if 'z' in special_response:
+                    self.logger.debug("z:" + str(special_response['z']))
+                if '4' in special_response:
+                    self.logger.debug("4:" + str(special_response['4']))
+                if 'a' in special_response:
+                    self.logger.debug("a:" + str(special_response['a']))
+                if 'p1' in special_response:
+                    self.logger.debug("p1:" + str(special_response['p1']))
                 self.tinyg_command_processed_signal.emit()
 
-            # self.logger.info("Processed: " + str(processed_json))
+            #self.logger.info("Processed: " + str(processed_json))
         except:
             pass
 
@@ -499,7 +520,7 @@ class PickAndPlateController(QtCore.QThread):
         self.x_y_home_request()
         self.light_change_requested(0)
 
-        self.tinyg_dump_settings_signal.emit()
+        # self.tinyg_dump_settings_signal.emit()
 
     def on_initial_system_homing_requested_slot(self):
         self.command_queue.append({'Command':'Initial Homing'})
