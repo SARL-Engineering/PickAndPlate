@@ -179,29 +179,21 @@ class PickAndPlateCycleHandler(QtCore.QThread):
         # CycleHandler MessageBox Signals/Slots
         self.no_embryos_msg_box_show_signal.connect(self.on_no_more_embryos_found_slot)
         self.no_embryos_msg_decision_signal.connect(self.on_msg_decision_made_slot)
-# TODO: FIGURE OUT WHY I CAN"T RUN MULTIPLE CYCLES
+
     def run(self):
         self.logger.debug("PickAndPlate Cycle Handler Thread Starting...")
         while self.not_abort_flag:
             if self.cycle_running_flag:
                 if self.cycle_init_flag:
                     self.run_cycle_init()
-                    self.start_time = time.time()
                     self.cycle_init_flag = False
 
                 self.check_if_no_embryos()
 
                 if self.cycle_end_flag:
-                    self.stop_time = time.time()
+                    self.run_cycle_end()
                     self.cycle_end_flag = False
-                    self.move_z(29)
-                    self.move_x_y(0,0)
-                    self.set_lights(0)
-                    self.interface_cycle_stop_signal.emit()
-                    self.set_motors(False)
                     self.cycle_running_flag = False
-
-                    self.logger.info("Cycle completed in " + str((self.stop_time-self.start_time)/60) + " minutes.")
                 else:
                     self.run_main_pick_and_plate_cycle()
 
@@ -211,9 +203,12 @@ class PickAndPlateCycleHandler(QtCore.QThread):
         self.logger.debug("PickAndPlate Cycle Handler Thread Exiting...")
 
     def run_main_pick_and_plate_cycle(self):
-        # while self.cycle_paused:
-        #     self.set_motors(True)
-        #     self.msleep(100)
+        self.msleep(100) #See how much this hurts things
+
+        while self.cycle_paused:
+            self.cycle_run_image_request_signal.emit()
+            self.set_motors(True)
+            self.msleep(100)
 
         while not self.data_received:
             self.cycle_run_image_request_signal.emit()
@@ -298,7 +293,7 @@ class PickAndPlateCycleHandler(QtCore.QThread):
             self.button_state = BUTTON_WAIT
             while self.button_state == BUTTON_WAIT:
                 if run_once:
-                    self.move_z(29)
+                    self.move_z(25)
                     self.move_x_y(0,0)
                     self.no_embryos_msg_box_show_signal.emit()
                     run_once = False
@@ -436,9 +431,19 @@ class PickAndPlateCycleHandler(QtCore.QThread):
         self.set_cycle_run_flags_and_variables()
         self.run_hardware_init()
         self.set_lights(1000)
-        self.move_z(29)
+        self.move_z(25)
 
         self.data_received = False
+
+    def run_cycle_end(self):
+        self.cycle_run_state_change_signal.emit(True)
+        self.stop_time = time.time()
+        self.move_z(25)
+        self.move_x_y(0,0)
+        self.set_lights(0)
+        self.interface_cycle_stop_signal.emit()
+        self.set_motors(False)
+        self.logger.info("Cycle completed in " + str((self.stop_time-self.start_time)/60) + " minutes.")
 
     def on_cycle_start_pressed_slot(self):
         self.cycle_running_flag = True
@@ -457,6 +462,9 @@ class PickAndPlateCycleHandler(QtCore.QThread):
         # Control flags / vars
         self.cycle_paused = False
         self.no_embryo_count = 0
+        self.cycle_end_flag = False
+
+        self.start_time = time.time()
 
         # Cal Vars
         self.dish_x = self.settings.value("system/system_calibration/dish_x_center").toFloat()[0]

@@ -150,6 +150,11 @@ class SerialHandler(QtCore.QThread):
                         self.send_one_line_from_queue()
             self.msleep(50)
 
+        # Block to turn off lights when program closes properly
+        self.serial_out_queue = []
+        self.on_light_change_requested_slot(0)
+        self.send_one_line_from_queue()
+
     def reconnect_to_tinyg(self):
        try:
             self.serial = serial.Serial(SERIAL_PORT, SERIAL_BAUD)  # Should never change unless you do bad things....
@@ -545,7 +550,6 @@ class PickAndPlateController(QtCore.QThread):
         self.light_change_requested(0)
 
         self.controller_init_complete_signal.emit()
-        #self.logger.info("START HERE!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
 
     def on_full_system_homing_requested_slot(self):
         self.command_queue.append({'Command':'Full Homing'})

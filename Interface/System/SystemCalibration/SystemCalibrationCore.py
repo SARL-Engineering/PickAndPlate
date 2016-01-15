@@ -242,7 +242,7 @@ class SystemCalibration(QtCore.QObject):
 
     def on_x_y_z_zero_clicked_slot(self):
         if self.tinyg_full_home_done:
-            self.z_move_request_signal.emit(29)
+            self.z_move_request_signal.emit(25)
             self.x_y_move_request_signal.emit(0 ,0)
             self.z_move_request_signal.emit(0)
             self.motor_state_change_signal.emit(True)
@@ -250,7 +250,7 @@ class SystemCalibration(QtCore.QObject):
     def on_z_max_clicked_slot(self):
         if self.tinyg_full_home_done:
             self.request_complete = False
-            self.z_move_request_signal.emit(29)
+            self.z_move_request_signal.emit(25)
             self.motor_state_change_signal.emit(True)
 
     def on_do_full_homing_clicked_slot(self):

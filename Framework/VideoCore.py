@@ -317,7 +317,9 @@ class PickAndPlateVideo(QtCore.QThread):
             self.requested_image_ready_signal.emit()
 
             while not self.images_displayed:
-                self.msleep(5)
+                if (not self.not_abort_flag) or (not self.video_being_used):
+                    break
+                self.msleep(10)
         except:
             self.logger.debug("failed to convert")
 

@@ -111,6 +111,7 @@ class Power(QtCore.QObject):
                                 print "Terminated"
                                 thread.terminate()
                         terminate_has_run = True
+                        all_threads_killed = True
             else:
                 all_threads_killed = True
 
