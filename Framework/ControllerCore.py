@@ -252,14 +252,16 @@ class SerialHandler(QtCore.QThread):
 
     def reset_tinyg(self):
         self.serial_out_queue.append("^x\n")
-        # self.serial_out_queue.append(self.convert_to_json({'xvm':10000}))
+
+        self.serial_out_queue.append(self.convert_to_json({'xvm':12500}))
+        self.serial_out_queue.append(self.convert_to_json({'yvm':12500}))
         #self.serial_out_queue.append(self.convert_to_json({'zvm':5000}))
         # self.serial_out_queue.append(self.convert_to_json({'zzb':6.5}))
         # self.serial_out_queue.append(self.convert_to_json({'ajm':1000}))
         # self.serial_out_queue.append(self.convert_to_json({'xjm':2000}))
         # self.serial_out_queue.append(self.convert_to_json({'yjm':2000}))
-        #self.serial_out_queue.append(self.convert_to_json({'zjh':300}))
-        #self.serial_out_queue.append(self.convert_to_json({'zjm':300}))
+        # self.serial_out_queue.append(self.convert_to_json({'zjh':300}))
+        # self.serial_out_queue.append(self.convert_to_json({'zjm':300}))
         # self.serial_out_queue.append(self.convert_to_json({'mt':20}))
 
     def on_motor_state_change_requested_slot(self, state):
@@ -525,7 +527,7 @@ class PickAndPlateController(QtCore.QThread):
         self.x_y_home_request()
         self.light_change_requested(0)
 
-        # self.tinyg_dump_settings_signal.emit()
+        self.tinyg_dump_settings_signal.emit()
 
     def on_initial_system_homing_requested_slot(self):
         self.command_queue.append({'Command':'Initial Homing'})

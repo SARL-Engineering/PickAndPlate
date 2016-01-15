@@ -203,8 +203,6 @@ class PickAndPlateCycleHandler(QtCore.QThread):
         self.logger.debug("PickAndPlate Cycle Handler Thread Exiting...")
 
     def run_main_pick_and_plate_cycle(self):
-        self.msleep(100) #See how much this hurts things
-
         while self.cycle_paused:
             self.cycle_run_image_request_signal.emit()
             self.set_motors(True)
