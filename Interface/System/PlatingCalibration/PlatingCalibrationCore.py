@@ -65,13 +65,15 @@ class PlatingCalibration(QtCore.QObject):
         self.d_place_height_sb = self.main_window.dechorionated_place_height_spin_box
         self.d_pick_tube_diameter_sb = self.main_window.dechorionated_pick_tube_diameter_spin_box
         self.d_pick_volume_sb = self.main_window.dechorionated_pick_volume_spin_box
-        self.d_jerk_sb = self.main_window.dechorionated_jerk_spin_box
+        self.d_z_vel_sb = self.main_window.dechorionated_z_velocity_spin_box
+        self.d_p_dwell_sb = self.main_window.dechorionated_placement_dwell_spin_box
 
         self.c_pick_height_sb = self.main_window.chorionated_pick_height_spin_box
         self.c_place_height_sb = self.main_window.chorionated_place_height_spin_box
         self.c_pick_tube_diameter_sb = self.main_window.chorionated_pick_tube_diameter_spin_box
         self.c_pick_volume_sb = self.main_window.chorionated_pick_volume_spin_box
-        self.c_jerk_sb = self.main_window.chorionated_jerk_spin_box
+        self.c_z_vel_sb = self.main_window.chorionated_z_velocity_spin_box
+        self.c_p_dwell_sb = self.main_window.chorionated_placement_dwell_spin_box
 
         # ########## Set up gui elements ##########
         self.toolbox.setCurrentIndex(0)
@@ -87,36 +89,42 @@ class PlatingCalibration(QtCore.QObject):
         self.d_place_height_sb.valueChanged.connect(self.save_changed_values_to_settings_slot)
         self.d_pick_tube_diameter_sb.valueChanged.connect(self.save_changed_values_to_settings_slot)
         self.d_pick_volume_sb.valueChanged.connect(self.save_changed_values_to_settings_slot)
-        self.d_jerk_sb.valueChanged.connect(self.save_changed_values_to_settings_slot)
+        self.d_z_vel_sb.valueChanged.connect(self.save_changed_values_to_settings_slot)
+        self.d_p_dwell_sb.valueChanged.connect(self.save_changed_values_to_settings_slot)
 
         self.c_pick_height_sb.valueChanged.connect(self.save_changed_values_to_settings_slot)
         self.c_place_height_sb.valueChanged.connect(self.save_changed_values_to_settings_slot)
         self.c_pick_tube_diameter_sb.valueChanged.connect(self.save_changed_values_to_settings_slot)
         self.c_pick_volume_sb.valueChanged.connect(self.save_changed_values_to_settings_slot)
-        self.c_jerk_sb.valueChanged.connect(self.save_changed_values_to_settings_slot)
+        self.c_z_vel_sb.valueChanged.connect(self.save_changed_values_to_settings_slot)
+        self.c_p_dwell_sb.valueChanged.connect(self.save_changed_values_to_settings_slot)
 
     def save_changed_values_to_settings_slot(self):
         self.settings.setValue("system/plating_calibration/d_pick_height", self.d_pick_height_sb.value())
         self.settings.setValue("system/plating_calibration/d_place_height", self.d_place_height_sb.value())
         self.settings.setValue("system/plating_calibration/d_tube_diameter", self.d_pick_tube_diameter_sb.value())
         self.settings.setValue("system/plating_calibration/d_pick_volume", self.d_pick_volume_sb.value())
-        self.settings.setValue("system/plating_calibration/d_jerk", self.d_jerk_sb.value())
+        self.settings.setValue("system/plating_calibration/d_z_velocity", self.d_z_vel_sb.value())
+        self.settings.setValue("system/plating_calibration/d_placement_dwell", self.d_p_dwell_sb.value())
 
         self.settings.setValue("system/plating_calibration/c_pick_height", self.c_pick_height_sb.value())
         self.settings.setValue("system/plating_calibration/c_place_height", self.c_place_height_sb.value())
         self.settings.setValue("system/plating_calibration/c_tube_diameter", self.c_pick_tube_diameter_sb.value())
         self.settings.setValue("system/plating_calibration/c_pick_volume", self.c_pick_volume_sb.value())
-        self.settings.setValue("system/plating_calibration/c_jerk", self.c_jerk_sb.value())
+        self.settings.setValue("system/plating_calibration/c_z_velocity", self.c_z_vel_sb.value())
+        self.settings.setValue("system/plating_calibration/c_placement_dwell", self.c_p_dwell_sb.value())
 
     def load_and_show_settings(self):
         self.d_pick_height_sb.setValue(self.settings.value("system/plating_calibration/d_pick_height").toDouble()[0])
         self.d_place_height_sb.setValue(self.settings.value("system/plating_calibration/d_place_height").toDouble()[0])
         self.d_pick_tube_diameter_sb.setValue(self.settings.value("system/plating_calibration/d_tube_diameter").toDouble()[0])
         self.d_pick_volume_sb.setValue(self.settings.value("system/plating_calibration/d_pick_volume").toDouble()[0])
-        self.d_jerk_sb.setValue(self.settings.value("system/plating_calibration/d_jerk").toInt()[0])
+        self.d_z_vel_sb.setValue(self.settings.value("system/plating_calibration/d_z_velocity").toDouble()[0])
+        self.d_p_dwell_sb.setValue(self.settings.value("system/plating_calibration/d_placement_dwell").toDouble()[0])
 
         self.c_pick_height_sb.setValue(self.settings.value("system/plating_calibration/c_pick_height").toDouble()[0])
         self.c_place_height_sb.setValue(self.settings.value("system/plating_calibration/c_place_height").toDouble()[0])
         self.c_pick_tube_diameter_sb.setValue(self.settings.value("system/plating_calibration/c_tube_diameter").toDouble()[0])
         self.c_pick_volume_sb.setValue(self.settings.value("system/plating_calibration/c_pick_volume").toDouble()[0])
-        self.c_jerk_sb.setValue(self.settings.value("system/plating_calibration/c_jerk").toInt()[0])
+        self.c_z_vel_sb.setValue(self.settings.value("system/plating_calibration/c_z_velocity").toDouble()[0])
+        self.c_p_dwell_sb.setValue(self.settings.value("system/plating_calibration/c_placement_dwell").toDouble()[0])

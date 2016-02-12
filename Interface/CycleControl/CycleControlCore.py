@@ -79,6 +79,15 @@ class CycleControl(QtCore.QThread):
         self.current_pick_label = self.main_window.cycle_current_pick_image_label
         self.current_pick_pos_label = self.main_window.cycle_current_pick_position_label
 
+        # Quick Settings
+        self.quick_d_button = self.main_window.cycle_settings_dechorionated_button
+        self.quick_c_button = self.main_window.cycle_settings_chorionated_button
+        self.quick_normal_button = self.main_window.cycle_settings_normal_run_button
+        self.quick_clean_button = self.main_window.cycle_settings_cleaning_run_button
+        self.quick_rows_button = self.main_window.cycle_settings_rows_first_button
+        self.quick_cols_button = self.main_window.cycle_settings_columns_first_button
+
+        # Stats
         self.current_pick_num_label = self.main_window.cycle_current_pick_number_label
         self.total_picked_num_label = self.main_window.cycle_total_picked_label
         self.mispick_label = self.main_window.cycle_mispicks_label
@@ -88,7 +97,6 @@ class CycleControl(QtCore.QThread):
         self.time_remaining_label = self.main_window.cycle_time_remaining_label
         self.success_rate_label = self.main_window.cycle_success_rate_label
 
-        self.is_chorionated_button = self.main_window.cycle_is_chorionated_button
         self.start_button = self.main_window.cycle_start_button
         self.pause_resume_button = self.main_window.cycle_pause_resume_button
         self.stop_button = self.main_window.cycle_stop_button
@@ -103,7 +111,6 @@ class CycleControl(QtCore.QThread):
         self.set_labels_to_defaults()
 
         # ########## Hide Currently Unused Gui Elements ##########
-        self.is_chorionated_button.setVisible(False)
         self.current_pick_num_label.setVisible(False)
         self.total_picked_num_label.setVisible(False)
         self.mispick_label.setVisible(False)
@@ -127,6 +134,14 @@ class CycleControl(QtCore.QThread):
 
         self.main_window.video.requested_image_ready_signal.connect(self.on_cycle_monitor_image_ready_slot)
 
+        # Quick Settings
+        self.quick_d_button.toggled.connect(self.on_dechorionated_button_clicked)
+        self.quick_c_button.toggled.connect(self.on_chorionated_button_clicked)
+        self.quick_normal_button.toggled.connect(self.on_normal_run_button_clicked)
+        self.quick_clean_button.toggled.connect(self.on_clean_run_button_clicked)
+        self.quick_rows_button.toggled.connect(self.on_rows_first_button_clicked)
+        self.quick_cols_button.toggled.connect(self.on_cols_first_button_clicked)
+
         # CycleHandler to CycleControl
         self.main_window.cycle_handler.interface_cycle_stop_signal.connect(self.on_stop_button_pressed_slot)
         self.main_window.cycle_handler.pick_images_ready_signal.connect(self.on_pick_images_ready_slot)
@@ -145,6 +160,37 @@ class CycleControl(QtCore.QThread):
         self.current_pick_label
         self.current_pick_pos_label.setText("Waiting for pick")
 
+        # Quick Settings
+        embryo_type = self.settings.value("quick_settings/embryo_type", "Dechorionated").toString()
+        run_type = self.settings.value("quick_settings/run_type", "Normal").toString()
+        plating_order = self.settings.value("quick_settings/plating_order", "Rows").toString()
+
+        self.logger.info(embryo_type)
+        self.logger.info(run_type)
+        self.logger.info(plating_order)
+
+        if embryo_type == "Dechorionated":
+            self.quick_d_button.setChecked(True)
+            self.quick_c_button.setChecked(False)
+        else:
+            self.quick_c_button.setChecked(True)
+            self.quick_d_button.setChecked(False)
+
+        if run_type == "Normal":
+            self.quick_normal_button.setChecked(True)
+            self.quick_clean_button.setChecked(False)
+        else:
+            self.quick_clean_button.setChecked(True)
+            self.quick_normal_button.setChecked(False)
+
+        if plating_order == "Rows":
+            self.quick_rows_button.setChecked(True)
+            self.quick_cols_button.setChecked(False)
+        else:
+            self.quick_cols_button.setChecked(True)
+            self.quick_rows_button.setChecked(False)
+        #
+
         self.current_pick_num_label.setText("N/A")
         self.total_picked_num_label.setText("N/A")
         self.mispick_label.setText("N/A")
@@ -158,16 +204,20 @@ class CycleControl(QtCore.QThread):
         self.set_labels_to_defaults()
         self.cycle_is_running = True
         self.master.cycle_running = True
+        self.stop_button.setChecked(False)
         self.start_button.setEnabled(False)
+        self.start_button.setChecked(True)
         self.start_cycle_signal.emit()
 
     def on_pause_resume_button_pressed_slot(self):
         if self.cycle_is_running:
             if self.pause_resume_button.text() == "Pause":
                 self.pause_resume_button.setText("Resume")
+                self.pause_resume_button.setChecked(True)
                 self.pause_cycle_signal.emit()
             else:
                 self.pause_resume_button.setText("Pause")
+                self.pause_resume_button.setChecked(False)
                 self.resume_cycle_signal.emit()
 
     def on_stop_button_pressed_slot(self):
@@ -175,8 +225,42 @@ class CycleControl(QtCore.QThread):
             self.cycle_is_running = False
             self.pause_resume_button.setText("Pause")
             self.start_button.setEnabled(True)
+            self.pause_resume_button.setChecked(False)
+            self.start_button.setChecked(False)
+            self.stop_button.setChecked(True)
             self.master.cycle_running = False
             self.stop_cycle_signal.emit()
+
+    # Quick Settings
+    def on_dechorionated_button_clicked(self, checked):
+        if checked:
+            self.quick_c_button.setChecked(False)
+            self.settings.setValue("quick_settings/embryo_type", "Dechorionated")
+
+    def on_chorionated_button_clicked(self, checked):
+        if checked:
+            self.quick_d_button.setChecked(False)
+            self.settings.setValue("quick_settings/embryo_type", "Chorionated")
+
+    def on_normal_run_button_clicked(self, checked):
+        if checked:
+            self.quick_clean_button.setChecked(False)
+            self.settings.setValue("quick_settings/run_type", "Normal")
+
+    def on_clean_run_button_clicked(self, checked):
+        if checked:
+            self.quick_normal_button.setChecked(False)
+            self.settings.setValue("quick_settings/run_type", "Clean")
+
+    def on_rows_first_button_clicked(self, checked):
+        if checked:
+            self.quick_cols_button.setChecked(False)
+            self.settings.setValue("quick_settings/plating_order", "Rows")
+
+    def on_cols_first_button_clicked(self, checked):
+        if checked:
+            self.quick_rows_button.setChecked(False)
+            self.settings.setValue("quick_settings/plating_order", "Cols")
 
     def on_cycle_monitor_image_ready_slot(self):
         try:

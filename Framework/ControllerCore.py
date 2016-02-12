@@ -64,7 +64,7 @@ import logging
 import serial
 import json
 import time
-
+from math import sqrt, pow
 # Custom imports
 
 #####################################
@@ -253,8 +253,8 @@ class SerialHandler(QtCore.QThread):
     def reset_tinyg(self):
         self.serial_out_queue.append("^x\n")
 
-        self.serial_out_queue.append(self.convert_to_json({'xvm':12500}))
-        self.serial_out_queue.append(self.convert_to_json({'yvm':12500}))
+        # self.serial_out_queue.append(self.convert_to_json({'xvm':12500}))
+        self.serial_out_queue.append(self.convert_to_json({'yvm':10000}))
         #self.serial_out_queue.append(self.convert_to_json({'zvm':5000}))
         # self.serial_out_queue.append(self.convert_to_json({'zzb':6.5}))
         # self.serial_out_queue.append(self.convert_to_json({'ajm':1000}))
@@ -335,6 +335,26 @@ class SerialHandler(QtCore.QThread):
 
         self.serial_out_queue.append(self.convert_to_json({'gc': out_string}))
 
+    def on_absolute_position_with_feedrate_change_requested_slot(self, x, y, z, a, f):
+        out_string = 'G90 G1'
+
+        if x != IGNORE_VALUE:
+            out_string += ' X' + str(x)
+
+        if y != IGNORE_VALUE:
+            out_string += ' Y' + str(y)
+
+        if z != IGNORE_VALUE:
+            out_string += ' Z' + str(z)
+
+        if a != IGNORE_VALUE:
+            out_string += ' A' + str(a)
+
+        if f != IGNORE_VALUE:
+            out_string += ' F' + str(f)
+
+        self.serial_out_queue.append(self.convert_to_json({'gc': out_string}))
+
     def on_relative_position_change_requested_slot(self, x, y, z, a):
         out_string = 'G91 G0'
 
@@ -372,6 +392,7 @@ class SerialHandler(QtCore.QThread):
 #####################################
 class PickAndPlateController(QtCore.QThread):
     tinyg_move_absolute_signal = QtCore.pyqtSignal(float, float, float, float)
+    tinyg_move_absolute_with_feedrate_signal = QtCore.pyqtSignal(float, float, float, float, float)
     tinyg_move_relative_signal = QtCore.pyqtSignal(float, float, float, float)
     tinyg_z_home_signal = QtCore.pyqtSignal(int)
     tinyg_x_y_home_signal = QtCore.pyqtSignal()
@@ -432,6 +453,8 @@ class PickAndPlateController(QtCore.QThread):
         self.tinyg_x_y_precision_home_signal.connect(self.serial_handler.on_x_y_precision_homing_requested_slot)
         self.tinyg_a_home_signal.connect(self.serial_handler.on_a_homing_requested_slot)
         self.tinyg_move_absolute_signal.connect(self.serial_handler.on_absolute_position_change_requested_slot)
+        self.tinyg_move_absolute_with_feedrate_signal.connect(
+            self.serial_handler.on_absolute_position_with_feedrate_change_requested_slot)
         self.tinyg_move_relative_signal.connect(self.serial_handler.on_relative_position_change_requested_slot)
         self.tinyg_dump_settings_signal.connect(self.serial_handler.on_dump_tinyg_settings_dump_slot)
 
@@ -471,6 +494,9 @@ class PickAndPlateController(QtCore.QThread):
                     self.z_home_request(current_command['Type'])
                 elif current_command['Command'] == 'X/Y Move ABS':
                     self.x_y_move_request(current_command['X'], current_command['Y'])
+                elif current_command['Command'] == 'X/Y Move ABS w/Feedrate':
+                    self.x_y_move_with_feedrate_request(current_command['X'], current_command['Y'],
+                                                        current_command['F'])
                 elif current_command['Command'] == 'X/Y Move REL':
                     self.x_y_move_relative_request(current_command['X'], current_command['Y'])
                 elif current_command['Command'] == 'X/Y Home':
@@ -519,6 +545,7 @@ class PickAndPlateController(QtCore.QThread):
 
     ########## Methods for all axes ##########
     def initial_system_homing_request(self):
+        self.tinyg_dump_settings_signal.emit()
         self.light_change_requested(500)
         self.a_axis_home_request()
         self.a_axis_move_request(100)
@@ -527,7 +554,6 @@ class PickAndPlateController(QtCore.QThread):
         self.x_y_home_request()
         self.light_change_requested(0)
 
-        self.tinyg_dump_settings_signal.emit()
 
     def on_initial_system_homing_requested_slot(self):
         self.command_queue.append({'Command':'Initial Homing'})
@@ -606,6 +632,12 @@ class PickAndPlateController(QtCore.QThread):
         #self.logger.info("Received X_Y at " + str(time.time()) + " seconds.")
         self.command_queue.append({'Command':'X/Y Move ABS', 'X':x, 'Y':y})
 
+    def on_x_y_axis_move_with_feedrate_requested_slot(self, x, y, f):
+        #self.timing_start_time = time.time()
+
+        #self.logger.info("Received X_Y at " + str(time.time()) + " seconds.")
+        self.command_queue.append({'Command':'X/Y Move ABS w/Feedrate', 'X':x, 'Y':y, 'F':f})
+
     def on_x_y_axis_move_relative_requested_slot(self, x, y):
         self.timing_start_time = time.time()
         self.command_queue.append({'Command':'X/Y Move REL', 'X':x, 'Y':y})
@@ -618,8 +650,16 @@ class PickAndPlateController(QtCore.QThread):
         while self.tinyg_machine_state == MOTION_RUNNING_STATE:
             self.msleep(50)
 
-        #self.timing_stop_time = time.time()
-        #self.logger.info("X_Y move completed in " + str(self.timing_stop_time-self.timing_start_time) + " seconds.")
+        self.controller_command_complete_signal.emit()
+
+    def x_y_move_with_feedrate_request(self, x ,y, f):
+        self.tinyg_move_absolute_with_feedrate_signal.emit(x, y,
+                                             IGNORE_VALUE, IGNORE_VALUE, f)
+
+        self.msleep(350)
+        while self.tinyg_machine_state == MOTION_RUNNING_STATE:
+            self.msleep(50)
+
         self.controller_command_complete_signal.emit()
 
     def x_y_move_relative_request(self, x, y):
@@ -627,11 +667,8 @@ class PickAndPlateController(QtCore.QThread):
 
         self.msleep(350)
         while self.tinyg_machine_state == MOTION_RUNNING_STATE:
-            # self.logger.debug("X Y Home Waiting...")
             self.msleep(50)
 
-        #self.timing_stop_time = time.time()
-        #self.logger.info("X_Y REL move completed in " + str(self.timing_stop_time-self.timing_start_time) + " seconds.")
         self.controller_command_complete_signal.emit()
 
 

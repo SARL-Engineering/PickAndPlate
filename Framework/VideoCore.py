@@ -37,7 +37,7 @@ import cv2
 import numpy
 import qimage2ndarray
 import subprocess
-
+from datetime import datetime
 
 # Custom imports
 
@@ -472,6 +472,8 @@ class PickAndPlateVideo(QtCore.QThread):
     def get_camera_frame(self):
         #self.raw_frame = cv2.imread('images/embryo_image.png', cv2.IMREAD_COLOR)
         return_val, self.raw_frame = self.video_camera.retrieve()
+        #filename = datetime.now().strftime("RawImage__%Y-%m-%d___%H-%M-%S.png")
+        #cv2.imwrite("/home/debian/screen_dumps/" + filename, self.raw_frame)
 
     def on_general_camera_settings_changed_slot(self):
         self.settings.sync()

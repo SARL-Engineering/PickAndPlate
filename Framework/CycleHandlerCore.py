@@ -58,6 +58,7 @@ BUTTON_WAIT = 2
 class PickAndPlateCycleHandler(QtCore.QThread):
     full_system_home_request_signal = QtCore.pyqtSignal()
     x_y_move_request_signal = QtCore.pyqtSignal(float, float)
+    x_y_move_request_with_feedrate_signal = QtCore.pyqtSignal(float, float, float)
     z_move_request_signal = QtCore.pyqtSignal(float)
     a_move_request_signal = QtCore.pyqtSignal(int)
     light_change_signal = QtCore.pyqtSignal(int)
@@ -157,6 +158,8 @@ class PickAndPlateCycleHandler(QtCore.QThread):
     def connect_signals_to_slots(self):
         # CycleHandler to Controller
         self.x_y_move_request_signal.connect(self.main_window.controller.on_x_y_axis_move_requested_slot)
+        self.x_y_move_request_with_feedrate_signal.connect(
+            self.main_window.controller.on_x_y_axis_move_with_feedrate_requested_slot)
         self.z_move_request_signal.connect(self.main_window.controller.on_z_axis_move_requested_slot)
         self.a_move_request_signal.connect(self.main_window.controller.on_a_axis_move_requested_slot)
         self.full_system_home_request_signal.connect(self.main_window.controller.on_full_system_homing_requested_slot)
@@ -235,8 +238,10 @@ class PickAndPlateCycleHandler(QtCore.QThread):
             self.make_current_and_last_pick_images(embryo_x_px, embryo_y_px)
 
             traverse_height = 20
-            pick_depth = -17
+            pick_depth = -18
             place_depth = -16
+            pick_volume = 75
+            well_dwell = 500  # milliseconds
 
             # self.logger.info("Center X: " + str(self.dish_x) + "\tX: " + str(embryo_x))
             # self.logger.info("Center Y: " + str(self.dish_y) + "\tY: " + str(embryo_y))
@@ -247,13 +252,13 @@ class PickAndPlateCycleHandler(QtCore.QThread):
 
             # Move to pick depth, suck up embryo, and move back up
             self.move_z(pick_depth)
-            self.move_a(150)
+            self.move_a(pick_volume)
             self.move_z(traverse_height)
 
             # Move to the next unused well on the plate, then go down and expel embryo
-            self.move_x_y(self.cur_plate_x, self.cur_plate_y)
+            self.move_x_y_timed(self.cur_plate_x, self.cur_plate_y, 1.2)
             self.move_z(place_depth)
-            self.move_a(-150)
+            self.msleep(well_dwell)
 
             # Move pick head back up and to the waste container
             self.move_z(traverse_height)
@@ -265,7 +270,7 @@ class PickAndPlateCycleHandler(QtCore.QThread):
 
             # Move down in waste and dispel any extra fluid
             self.move_z(-5)
-            self.move_a(-90)
+            self.move_a(-(pick_volume+90))
             self.move_a(90)
             self.move_z(traverse_height)
 
@@ -347,6 +352,18 @@ class PickAndPlateCycleHandler(QtCore.QThread):
         self.x_y_move_request_signal.emit(x, y)
         while not self.controller_command_complete:
             # self.logger.info("Waiting for x_y")
+            self.msleep(150)
+
+    def move_x_y_timed(self, x, y, seconds):
+        self.controller_command_complete = False
+
+        delta_x = abs(x-self.tinyg_x_location)
+        delta_y = abs(y-self.tinyg_y_location)
+
+        feedrate = (sqrt(pow(delta_x, 2) + pow(delta_y, 2))/seconds)*60  #Feedrate is in mm/min
+
+        self.x_y_move_request_with_feedrate_signal.emit(x, y, feedrate)
+        while not self.controller_command_complete:
             self.msleep(150)
 
     def move_z(self, z):
@@ -437,6 +454,13 @@ class PickAndPlateCycleHandler(QtCore.QThread):
         self.cycle_run_state_change_signal.emit(True)
         self.stop_time = time.time()
         self.move_z(25)
+
+        self.move_x_y(self.waste_x, self.waste_y)
+        self.move_z(-5)
+        self.move_a(-100)
+        self.move_a(100)
+        self.move_z(25)
+
         self.move_x_y(0,0)
         self.set_lights(0)
         self.interface_cycle_stop_signal.emit()
