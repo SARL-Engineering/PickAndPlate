@@ -154,6 +154,7 @@ class PickAndPlateVideo(QtCore.QThread):
         self.video_being_used = False
         self.video_output_widget_name = None
         self.video_output_type = None
+        self.detection_profile_name = None
 
         self.images_displayed = False
         self.count = 0
@@ -248,23 +249,12 @@ class PickAndPlateVideo(QtCore.QThread):
             self.show_cycle_run()
 
     def show_detection_calibration(self):
-
         self.setup_blob_params()
-        self.min_thresh = self.settings.value("system/detection_calibration/min_binary_thresh").toInt()[0]
-        self.x_res = self.settings.value("system/system_settings/camera_res_width").toInt()[0]
-        self.y_res = self.settings.value("system/system_settings/camera_res_height").toInt()[0]
-        self.x_center = self.settings.value("system/system_calibration/crop_x_center").toInt()[0]
-        self.y_center = self.settings.value("system/system_calibration/crop_y_center").toInt()[0]
-        self.crop_dim_half = (self.settings.value("system/system_calibration/crop_dimension").toInt()[0] / 2)
-        self.usable_offset = self.settings.value("system/system_calibration/usable_area_offset").toInt()[0]
-
 
         frame = numpy.array([])
 
         if self.video_output_type == "Original Video":
-            #cv2.imwrite("images/full_size.png", self.raw_frame)
             cropped = self.crop_image(self.raw_frame)
-            # cropped = cropped.copy()
             frame = cv2.cvtColor(cropped, cv2.COLOR_BGR2RGB)
 
         elif self.video_output_type == "Greyscale":
@@ -350,13 +340,13 @@ class PickAndPlateVideo(QtCore.QThread):
             self.setup_blob_params()
             self.setup_params_once = False
 
-            self.min_thresh = self.settings.value("system/detection_calibration/min_binary_thresh").toInt()[0]
-            self.x_res = self.settings.value("system/system_settings/camera_res_width").toInt()[0]
-            self.y_res = self.settings.value("system/system_settings/camera_res_height").toInt()[0]
-            self.x_center = self.settings.value("system/system_calibration/crop_x_center").toInt()[0]
-            self.y_center = self.settings.value("system/system_calibration/crop_y_center").toInt()[0]
-            self.crop_dim_half = (self.settings.value("system/system_calibration/crop_dimension").toInt()[0] / 2)
-            self.usable_offset = self.settings.value("system/system_calibration/usable_area_offset").toInt()[0]
+            # self.min_thresh = self.settings.value("system/detection_calibration/min_binary_thresh").toInt()[0]
+            # self.x_res = self.settings.value("system/system_settings/camera_res_width").toInt()[0]
+            # self.y_res = self.settings.value("system/system_settings/camera_res_height").toInt()[0]
+            # self.x_center = self.settings.value("system/system_calibration/crop_x_center").toInt()[0]
+            # self.y_center = self.settings.value("system/system_calibration/crop_y_center").toInt()[0]
+            # self.crop_dim_half = (self.settings.value("system/system_calibration/crop_dimension").toInt()[0] / 2)
+            # self.usable_offset = self.settings.value("system/system_calibration/usable_area_offset").toInt()[0]
 
         if  not self.wait_for_image_req:
             self.wait_for_image_req = True
@@ -391,25 +381,30 @@ class PickAndPlateVideo(QtCore.QThread):
         return output_frame
 
     def setup_blob_params(self):
-        min_blob_dist = self.settings.value("system/detection_calibration/min_blob_distance").toDouble()[0]
-        min_repeat = self.settings.value("system/detection_calibration/min_repeat").toInt()[0]
-        blob_thresh_min = self.settings.value("system/detection_calibration/blob_thresh_min").toInt()[0]
-        blob_thresh_max = self.settings.value("system/detection_calibration/blob_thresh_max").toInt()[0]
-        blob_thresh_step = self.settings.value("system/detection_calibration/blob_thresh_step").toInt()[0]
-        blob_color_en = self.settings.value("system/detection_calibration/blob_color_enabled").toInt()[0]
-        blob_color_val = self.settings.value("system/detection_calibration/blob_color").toInt()[0]
-        blob_area_en = self.settings.value("system/detection_calibration/blob_area_enabled").toInt()[0]
-        blob_area_min = self.settings.value("system/detection_calibration/blob_area_min").toDouble()[0]
-        blob_area_max = self.settings.value("system/detection_calibration/blob_area_max").toDouble()[0]
-        blob_circ_en = self.settings.value("system/detection_calibration/blob_circularity_enabled").toInt()[0]
-        blob_circ_min = self.settings.value("system/detection_calibration/blob_circularity_min").toDouble()[0]
-        blob_circ_max = self.settings.value("system/detection_calibration/blob_circularity_max").toDouble()[0]
-        blob_conv_en = self.settings.value("system/detection_calibration/blob_convexity_enabled").toInt()[0]
-        blob_conv_min = self.settings.value("system/detection_calibration/blob_convexity_min").toDouble()[0]
-        blob_conv_max = self.settings.value("system/detection_calibration/blob_convexity_max").toDouble()[0]
-        blob_inertia_en = self.settings.value("system/detection_calibration/blob_inertia_enabled").toInt()[0]
-        blob_inertia_min = self.settings.value("system/detection_calibration/blob_inertia_min").toDouble()[0]
-        blob_inertia_max = self.settings.value("system/detection_calibration/blob_inertia_max").toDouble()[0]
+        if self.detection_profile_name == "Dechorionated":
+            prefix = "d_"
+        else:
+            prefix = "c_"
+
+        min_blob_dist = self.settings.value("system/detection_calibration/" + prefix + "min_blob_distance").toDouble()[0]
+        min_repeat = self.settings.value("system/detection_calibration/" + prefix + "min_repeat").toInt()[0]
+        blob_thresh_min = self.settings.value("system/detection_calibration/" + prefix + "blob_thresh_min").toInt()[0]
+        blob_thresh_max = self.settings.value("system/detection_calibration/" + prefix + "blob_thresh_max").toInt()[0]
+        blob_thresh_step = self.settings.value("system/detection_calibration/" + prefix + "blob_thresh_step").toInt()[0]
+        blob_color_en = self.settings.value("system/detection_calibration/" + prefix + "blob_color_enabled").toInt()[0]
+        blob_color_val = self.settings.value("system/detection_calibration/" + prefix + "blob_color").toInt()[0]
+        blob_area_en = self.settings.value("system/detection_calibration/" + prefix + "blob_area_enabled").toInt()[0]
+        blob_area_min = self.settings.value("system/detection_calibration/" + prefix + "blob_area_min").toDouble()[0]
+        blob_area_max = self.settings.value("system/detection_calibration/" + prefix + "blob_area_max").toDouble()[0]
+        blob_circ_en = self.settings.value("system/detection_calibration/" + prefix + "blob_circularity_enabled").toInt()[0]
+        blob_circ_min = self.settings.value("system/detection_calibration/" + prefix + "blob_circularity_min").toDouble()[0]
+        blob_circ_max = self.settings.value("system/detection_calibration/" + prefix + "blob_circularity_max").toDouble()[0]
+        blob_conv_en = self.settings.value("system/detection_calibration/" + prefix + "blob_convexity_enabled").toInt()[0]
+        blob_conv_min = self.settings.value("system/detection_calibration/" + prefix + "blob_convexity_min").toDouble()[0]
+        blob_conv_max = self.settings.value("system/detection_calibration/" + prefix + "blob_convexity_max").toDouble()[0]
+        blob_inertia_en = self.settings.value("system/detection_calibration/" + prefix + "blob_inertia_enabled").toInt()[0]
+        blob_inertia_min = self.settings.value("system/detection_calibration/" + prefix + "blob_inertia_min").toDouble()[0]
+        blob_inertia_max = self.settings.value("system/detection_calibration/" + prefix + "blob_inertia_max").toDouble()[0]
 
 
         self.current_params.minDistBetweenBlobs = min_blob_dist
@@ -452,6 +447,14 @@ class PickAndPlateVideo(QtCore.QThread):
         else:
             self.current_params.filterByInertia = False
 
+        self.min_thresh = self.settings.value("system/detection_calibration/" + prefix + "min_binary_thresh").toInt()[0]
+        self.x_res = self.settings.value("system/system_settings/camera_res_width").toInt()[0]
+        self.y_res = self.settings.value("system/system_settings/camera_res_height").toInt()[0]
+        self.x_center = self.settings.value("system/system_calibration/crop_x_center").toInt()[0]
+        self.y_center = self.settings.value("system/system_calibration/crop_y_center").toInt()[0]
+        self.crop_dim_half = (self.settings.value("system/system_calibration/crop_dimension").toInt()[0] / 2)
+        self.usable_offset = self.settings.value("system/system_calibration/usable_area_offset").toInt()[0]
+
     @staticmethod
     def convert_to_qimage(input_matrix):
         return qimage2ndarray.array2qimage(input_matrix)
@@ -479,21 +482,23 @@ class PickAndPlateVideo(QtCore.QThread):
         self.settings.sync()
         self.reconnect_to_camera_flag = True
 
-    def detection_calibration_preview_status_slot(self, enabled_state, which_image):
+    def detection_calibration_preview_status_slot(self, enabled_state, which_image, which_profile):
         if enabled_state:
             self.setup_params_once = True
 
         self.video_being_used = enabled_state
         self.video_output_type = which_image
         self.video_output_widget_name = self.DETECTION_CAL
+        self.detection_profile_name = which_profile
 
     def system_calibration_preview_status_slot(self, enabled_state):
 
         self.video_being_used = enabled_state
         self.video_output_widget_name = self.SYSTEM_CAL
 
-    def cycle_run_changed_slot(self, enabled_state):
+    def cycle_run_changed_slot(self, enabled_state, which_profile):
         if enabled_state:
+            self.detection_profile_name = which_profile
             self.setup_params_once = True
 
         self.video_being_used = enabled_state

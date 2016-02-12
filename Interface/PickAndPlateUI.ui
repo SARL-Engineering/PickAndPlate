@@ -254,7 +254,7 @@ QPushButton{
        <enum>QTabWidget::Rounded</enum>
       </property>
       <property name="currentIndex">
-       <number>0</number>
+       <number>2</number>
       </property>
       <widget class="QWidget" name="tab">
        <attribute name="title">
@@ -1574,7 +1574,7 @@ QTabBar::tab:last{
 }</string>
           </property>
           <property name="currentIndex">
-           <number>0</number>
+           <number>2</number>
           </property>
           <widget class="QWidget" name="tab_6">
            <attribute name="title">
@@ -1605,8 +1605,8 @@ QToolBox::tab:selected{
                   <rect>
                    <x>0</x>
                    <y>0</y>
-                   <width>419</width>
-                   <height>175</height>
+                   <width>736</width>
+                   <height>258</height>
                   </rect>
                  </property>
                  <attribute name="label">
@@ -2618,8 +2618,8 @@ p, li { white-space: pre-wrap; }
                   <rect>
                    <x>0</x>
                    <y>0</y>
-                   <width>414</width>
-                   <height>193</height>
+                   <width>478</width>
+                   <height>194</height>
                   </rect>
                  </property>
                  <attribute name="label">
@@ -3248,7 +3248,7 @@ p, li { white-space: pre-wrap; }
                  </widget>
                 </item>
                 <item>
-                 <widget class="QComboBox" name="detection_calibration_image_preview_combo_box_2">
+                 <widget class="QComboBox" name="detection_calibration_profile_selection_combo_box">
                   <property name="styleSheet">
                    <string notr="true">background-color:rgb(55,55,55)</string>
                   </property>
@@ -3922,7 +3922,7 @@ Repeatability</string>
                   <item>
                    <widget class="QLabel" name="detection_num_detected_label">
                     <property name="text">
-                     <string>527</string>
+                     <string>0</string>
                     </property>
                    </widget>
                   </item>

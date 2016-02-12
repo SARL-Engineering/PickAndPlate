@@ -165,10 +165,6 @@ class CycleControl(QtCore.QThread):
         run_type = self.settings.value("quick_settings/run_type", "Normal").toString()
         plating_order = self.settings.value("quick_settings/plating_order", "Rows").toString()
 
-        self.logger.info(embryo_type)
-        self.logger.info(run_type)
-        self.logger.info(plating_order)
-
         if embryo_type == "Dechorionated":
             self.quick_d_button.setChecked(True)
             self.quick_c_button.setChecked(False)
@@ -189,8 +185,8 @@ class CycleControl(QtCore.QThread):
         else:
             self.quick_cols_button.setChecked(True)
             self.quick_rows_button.setChecked(False)
-        #
 
+        # Stats
         self.current_pick_num_label.setText("N/A")
         self.total_picked_num_label.setText("N/A")
         self.mispick_label.setText("N/A")
@@ -207,6 +203,14 @@ class CycleControl(QtCore.QThread):
         self.stop_button.setChecked(False)
         self.start_button.setEnabled(False)
         self.start_button.setChecked(True)
+
+        self.quick_d_button.setEnabled(False)
+        self.quick_c_button.setEnabled(False)
+        self.quick_normal_button.setEnabled(False)
+        self.quick_clean_button.setEnabled(False)
+        self.quick_rows_button.setEnabled(False)
+        self.quick_cols_button.setEnabled(False)
+
         self.start_cycle_signal.emit()
 
     def on_pause_resume_button_pressed_slot(self):
@@ -229,6 +233,14 @@ class CycleControl(QtCore.QThread):
             self.start_button.setChecked(False)
             self.stop_button.setChecked(True)
             self.master.cycle_running = False
+
+            self.quick_d_button.setEnabled(True)
+            self.quick_c_button.setEnabled(True)
+            self.quick_normal_button.setEnabled(True)
+            self.quick_clean_button.setEnabled(True)
+            self.quick_rows_button.setEnabled(True)
+            self.quick_cols_button.setEnabled(True)
+
             self.stop_cycle_signal.emit()
 
     # Quick Settings

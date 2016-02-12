@@ -46,7 +46,7 @@ import logging
 #####################################
 class DetectionCalibration(QtCore.QObject):
 
-    detection_image_preview_options_changed_signal = QtCore.pyqtSignal(int, str)
+    detection_image_preview_options_changed_signal = QtCore.pyqtSignal(int, str, str)
     image_displayed_signal = QtCore.pyqtSignal()
 
     light_change_signal = QtCore.pyqtSignal(int)
@@ -95,6 +95,7 @@ class DetectionCalibration(QtCore.QObject):
 
         self.num_detected_label = self.main_window.detection_num_detected_label
 
+        self.profile_sel_combo_box = self.main_window.detection_calibration_profile_selection_combo_box
         self.cal_preview_button = self.main_window.detection_calibration_image_preview_button
         self.cal_preview_combo_box = self.main_window.detection_calibration_image_preview_combo_box
 
@@ -104,6 +105,9 @@ class DetectionCalibration(QtCore.QObject):
         self.lights_off_button = self.main_window.detection_lights_off_button
         self.motors_on_button = self.main_window.detection_motors_on_button
         self.motors_off_button = self.main_window.detection_motors_off_button
+
+        # ########## Class variables ##########
+        self.profile_change_lockout = False
 
         # ########## Load settings and set widgets to values ##########
         self.load_and_show_settings()
@@ -139,6 +143,8 @@ class DetectionCalibration(QtCore.QObject):
         self.blob_inertia_min_sb.valueChanged.connect(self.save_changed_values_to_settings_slot)
         self.blob_inertia_max_sb.valueChanged.connect(self.save_changed_values_to_settings_slot)
 
+        self.profile_sel_combo_box.currentIndexChanged.connect(self.load_and_show_settings)
+        self.profile_sel_combo_box.currentIndexChanged.connect(self.detection_image_preview_options_changed_slot)
         self.cal_preview_button.toggled.connect(self.detection_image_preview_options_changed_slot)
         self.cal_preview_combo_box.currentIndexChanged.connect(self.detection_image_preview_options_changed_slot)
 
@@ -160,89 +166,120 @@ class DetectionCalibration(QtCore.QObject):
         self.motor_state_change_signal.connect(self.main_window.controller.on_motor_state_change_request_signal_slot)
 
     def save_changed_values_to_settings_slot(self):
-        self.settings.setValue("system/detection_calibration/min_binary_thresh", self.min_binary_thresh_sb.value())
-        self.settings.setValue("system/detection_calibration/min_blob_distance", self.min_blob_dist_sb.value())
-        self.settings.setValue("system/detection_calibration/min_repeat", self.min_repeat_sb.value())
+        if not self.profile_change_lockout:
+            if self.profile_sel_combo_box.currentText() == "Dechorionated":
+                prefix = "d_"
+            else:
+                prefix = "c_"
 
-        self.settings.setValue("system/detection_calibration/blob_thresh_min", self.blob_thresh_min_sb.value())
-        self.settings.setValue("system/detection_calibration/blob_thresh_max", self.blob_thresh_max_sb.value())
-        self.settings.setValue("system/detection_calibration/blob_thresh_step", self.blob_thresh_step_sb.value())
+            self.settings.setValue("system/detection_calibration/" + prefix + "min_binary_thresh",
+                                   self.min_binary_thresh_sb.value())
+            self.settings.setValue("system/detection_calibration/" + prefix + "min_blob_distance",
+                                   self.min_blob_dist_sb.value())
+            self.settings.setValue("system/detection_calibration/" + prefix + "min_repeat",
+                                   self.min_repeat_sb.value())
 
-        self.settings.setValue("system/detection_calibration/blob_color_enabled", int(self.blob_color_gb.isChecked()))
-        self.settings.setValue("system/detection_calibration/blob_color", self.blob_color_sb.value())
+            self.settings.setValue("system/detection_calibration/" + prefix + "blob_thresh_min",
+                                   self.blob_thresh_min_sb.value())
+            self.settings.setValue("system/detection_calibration/" + prefix + "blob_thresh_max",
+                                   self.blob_thresh_max_sb.value())
+            self.settings.setValue("system/detection_calibration/" + prefix + "blob_thresh_step",
+                                   self.blob_thresh_step_sb.value())
 
-        self.settings.setValue("system/detection_calibration/blob_area_enabled", int(self.blob_area_gb.isChecked()))
-        self.settings.setValue("system/detection_calibration/blob_area_min", self.blob_area_min_sb.value())
-        self.settings.setValue("system/detection_calibration/blob_area_max", self.blob_area_max_sb.value())
+            self.settings.setValue("system/detection_calibration/" + prefix + "blob_color_enabled",
+                                   int(self.blob_color_gb.isChecked()))
+            self.settings.setValue("system/detection_calibration/" + prefix + "blob_color",
+                                   self.blob_color_sb.value())
 
-        self.settings.setValue("system/detection_calibration/blob_circularity_enabled",
-                               int(self.blob_circularity_gb.isChecked()))
-        self.settings.setValue("system/detection_calibration/blob_circularity_min",
-                               self.blob_circularity_min_sb.value())
-        self.settings.setValue("system/detection_calibration/blob_circularity_max",
-                               self.blob_circularity_max_sb.value())
+            self.settings.setValue("system/detection_calibration/" + prefix + "blob_area_enabled",
+                                   int(self.blob_area_gb.isChecked()))
+            self.settings.setValue("system/detection_calibration/" + prefix + "blob_area_min",
+                                   self.blob_area_min_sb.value())
+            self.settings.setValue("system/detection_calibration/" + prefix + "blob_area_max",
+                                   self.blob_area_max_sb.value())
 
-        self.settings.setValue("system/detection_calibration/blob_convexity_enabled",
-                               int(self.blob_convexity_gb.isChecked()))
-        self.settings.setValue("system/detection_calibration/blob_convexity_min", self.blob_convexity_min_sb.value())
-        self.settings.setValue("system/detection_calibration/blob_convexity_max", self.blob_convexity_max_sb.value())
+            self.settings.setValue("system/detection_calibration/" + prefix + "blob_circularity_enabled",
+                                   int(self.blob_circularity_gb.isChecked()))
+            self.settings.setValue("system/detection_calibration/" + prefix + "blob_circularity_min",
+                                   self.blob_circularity_min_sb.value())
+            self.settings.setValue("system/detection_calibration/" + prefix + "blob_circularity_max",
+                                   self.blob_circularity_max_sb.value())
 
-        self.settings.setValue("system/detection_calibration/blob_inertia_enabled",
-                               int(self.blob_inertia_gb.isChecked()))
-        self.settings.setValue("system/detection_calibration/blob_inertia_min", self.blob_inertia_min_sb.value())
-        self.settings.setValue("system/detection_calibration/blob_inertia_max", self.blob_inertia_max_sb.value())
+            self.settings.setValue("system/detection_calibration/" + prefix + "blob_convexity_enabled",
+                                   int(self.blob_convexity_gb.isChecked()))
+            self.settings.setValue("system/detection_calibration/" + prefix + "blob_convexity_min",
+                                   self.blob_convexity_min_sb.value())
+            self.settings.setValue("system/detection_calibration/" + prefix + "blob_convexity_max",
+                                   self.blob_convexity_max_sb.value())
+
+            self.settings.setValue("system/detection_calibration/" + prefix + "blob_inertia_enabled",
+                                   int(self.blob_inertia_gb.isChecked()))
+            self.settings.setValue("system/detection_calibration/" + prefix + "blob_inertia_min",
+                                   self.blob_inertia_min_sb.value())
+            self.settings.setValue("system/detection_calibration/" + prefix + "blob_inertia_max",
+                                   self.blob_inertia_max_sb.value())
 
     def load_and_show_settings(self):
+        self.profile_change_lockout = True
+
+        if self.profile_sel_combo_box.currentText() == "Dechorionated":
+            prefix = "d_"
+        else:
+            prefix = "c_"
+
         self.min_binary_thresh_sb.setValue(
-            self.settings.value("system/detection_calibration/min_binary_thresh").toInt()[0])
+            self.settings.value("system/detection_calibration/" + prefix + "min_binary_thresh").toInt()[0])
         self.min_blob_dist_sb.setValue(
-            self.settings.value("system/detection_calibration/min_blob_distance").toDouble()[0])
+            self.settings.value("system/detection_calibration/" + prefix + "min_blob_distance").toDouble()[0])
         self.min_repeat_sb.setValue(
-            self.settings.value("system/detection_calibration/min_repeat").toInt()[0])
+            self.settings.value("system/detection_calibration/" + prefix + "min_repeat").toInt()[0])
 
         self.blob_thresh_min_sb.setValue(
-            self.settings.value("system/detection_calibration/blob_thresh_min").toInt()[0])
+            self.settings.value("system/detection_calibration/" + prefix + "blob_thresh_min").toInt()[0])
         self.blob_thresh_max_sb.setValue(
-            self.settings.value("system/detection_calibration/blob_thresh_max").toInt()[0])
+            self.settings.value("system/detection_calibration/" + prefix + "blob_thresh_max").toInt()[0])
         self.blob_thresh_step_sb.setValue(
-            self.settings.value("system/detection_calibration/blob_thresh_step").toInt()[0])
+            self.settings.value("system/detection_calibration/" + prefix + "blob_thresh_step").toInt()[0])
 
         self.blob_color_gb.setChecked(
-            self.settings.value("system/detection_calibration/blob_color_enabled").toInt()[0])
+            self.settings.value("system/detection_calibration/" + prefix + "blob_color_enabled").toInt()[0])
         self.blob_color_sb.setValue(
-            self.settings.value("system/detection_calibration/blob_color").toInt()[0])
+            self.settings.value("system/detection_calibration/" + prefix + "blob_color").toInt()[0])
 
         self.blob_area_gb.setChecked(
-            self.settings.value("system/detection_calibration/blob_area_enabled").toInt()[0])
+            self.settings.value("system/detection_calibration/" + prefix + "blob_area_enabled").toInt()[0])
         self.blob_area_min_sb.setValue(
-            self.settings.value("system/detection_calibration/blob_area_min").toDouble()[0])
+            self.settings.value("system/detection_calibration/" + prefix + "blob_area_min").toDouble()[0])
         self.blob_area_max_sb.setValue(
-            self.settings.value("system/detection_calibration/blob_area_max").toDouble()[0])
+            self.settings.value("system/detection_calibration/" + prefix + "blob_area_max").toDouble()[0])
 
         self.blob_circularity_gb.setChecked(
-            self.settings.value("system/detection_calibration/blob_circularity_enabled").toInt()[0])
+            self.settings.value("system/detection_calibration/" + prefix + "blob_circularity_enabled").toInt()[0])
         self.blob_circularity_min_sb.setValue(
-            self.settings.value("system/detection_calibration/blob_circularity_min").toDouble()[0])
+            self.settings.value("system/detection_calibration/" + prefix + "blob_circularity_min").toDouble()[0])
         self.blob_circularity_max_sb.setValue(
-            self.settings.value("system/detection_calibration/blob_circularity_max").toDouble()[0])
+            self.settings.value("system/detection_calibration/" + prefix + "blob_circularity_max").toDouble()[0])
 
         self.blob_convexity_gb.setChecked(
-            self.settings.value("system/detection_calibration/blob_convexity_enabled").toInt()[0])
+            self.settings.value("system/detection_calibration/" + prefix + "blob_convexity_enabled").toInt()[0])
         self.blob_convexity_min_sb.setValue(
-            self.settings.value("system/detection_calibration/blob_convexity_min").toDouble()[0])
+            self.settings.value("system/detection_calibration/" + prefix + "blob_convexity_min").toDouble()[0])
         self.blob_convexity_max_sb.setValue(
-            self.settings.value("system/detection_calibration/blob_convexity_max").toDouble()[0])
+            self.settings.value("system/detection_calibration/" + prefix + "blob_convexity_max").toDouble()[0])
 
         self.blob_inertia_gb.setChecked(
-            self.settings.value("system/detection_calibration/blob_inertia_enabled").toInt()[0])
+            self.settings.value("system/detection_calibration/" + prefix + "blob_inertia_enabled").toInt()[0])
         self.blob_inertia_min_sb.setValue(
-            self.settings.value("system/detection_calibration/blob_inertia_min").toDouble()[0])
+            self.settings.value("system/detection_calibration/" + prefix + "blob_inertia_min").toDouble()[0])
         self.blob_inertia_max_sb.setValue(
-            self.settings.value("system/detection_calibration/blob_inertia_max").toDouble()[0])
+            self.settings.value("system/detection_calibration/" + prefix + "blob_inertia_max").toDouble()[0])
+
+        self.profile_change_lockout = False
 
     def detection_image_preview_options_changed_slot(self):
         self.detection_image_preview_options_changed_signal.emit(self.cal_preview_button.isChecked(),
-                                                                 self.cal_preview_combo_box.currentText())
+                                                                 self.cal_preview_combo_box.currentText(),
+                                                                 self.profile_sel_combo_box.currentText())
         if not self.cal_preview_button.isChecked():
             self.image_preview_label.clear()
 

@@ -64,7 +64,7 @@ class PickAndPlateCycleHandler(QtCore.QThread):
     light_change_signal = QtCore.pyqtSignal(int)
     motor_state_change_signal = QtCore.pyqtSignal(int)
 
-    cycle_run_state_change_signal = QtCore.pyqtSignal(bool)
+    cycle_run_state_change_signal = QtCore.pyqtSignal(bool, str)
     cycle_run_image_request_signal = QtCore.pyqtSignal()
     interface_cycle_stop_signal = QtCore.pyqtSignal()
 
@@ -441,7 +441,7 @@ class PickAndPlateCycleHandler(QtCore.QThread):
     ##########  ###########
     def run_cycle_init(self):
         self.set_motors(True)
-        self.cycle_run_state_change_signal.emit(True)
+        self.cycle_run_state_change_signal.emit(True, self.settings.value("quick_settings/embryo_type").toString())
         self.cycle_run_image_request_signal.emit()
         self.set_cycle_run_flags_and_variables()
         self.run_hardware_init()
@@ -451,7 +451,7 @@ class PickAndPlateCycleHandler(QtCore.QThread):
         self.data_received = False
 
     def run_cycle_end(self):
-        self.cycle_run_state_change_signal.emit(True)
+        self.cycle_run_state_change_signal.emit(False, self.settings.value("quick_settings/embryo_type").toString())
         self.stop_time = time.time()
         self.move_z(25)
 

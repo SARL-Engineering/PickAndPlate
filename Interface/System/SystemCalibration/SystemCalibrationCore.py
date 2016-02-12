@@ -100,7 +100,10 @@ class SystemCalibration(QtCore.QObject):
         self.save_z_center_button = self.main_window.alignment_save_precision_z_button
         self.save_dish_button = self.main_window.alignment_save_dish_button
         self.save_a1_button = self.main_window.alignment_save_a1_button
+        self.save_clean_button = self.main_window.alignment_save_clean_button
         self.save_waste_button = self.main_window.alignment_save_waste_button
+        self.save_dish_min_button = self.main_window.alignment_save_dish_min_button
+        self.save_plate_min_button = self.main_window.alignment_save_plate_min_button
 
         self.lights_on_button = self.main_window.alignment_lights_on_button
         self.lights_off_button = self.main_window.alignment_lights_off_button
@@ -272,9 +275,22 @@ class SystemCalibration(QtCore.QObject):
         self.settings.setValue("system/system_calibration/a1_y_center", self.tinyg_y_location)
         self.setting_saved_messagebox_show_signal.emit()
 
+    def on_save_clean_center_clicked_slot(self):
+        self.settings.setValue("system/system_calibration/clean_x_center", self.tinyg_x_location)
+        self.settings.setValue("system/system_calibration/clean_y_center", self.tinyg_y_location)
+        self.setting_saved_messagebox_show_signal.emit()
+
     def on_save_waste_center_clicked_slot(self):
         self.settings.setValue("system/system_calibration/waste_x_center", self.tinyg_x_location)
         self.settings.setValue("system/system_calibration/waste_y_center", self.tinyg_y_location)
+        self.setting_saved_messagebox_show_signal.emit()
+
+    def on_save_dish_min_clicked_slot(self):
+        self.settings.setValue("system/system_calibration/dish_z_min", self.tinyg_z_location)
+        self.setting_saved_messagebox_show_signal.emit()
+
+    def on_save_plate_min_clicked_slot(self):
+        self.settings.setValue("system/system_calibration/plate_z_min", self.tinyg_z_location)
         self.setting_saved_messagebox_show_signal.emit()
 
     @staticmethod
