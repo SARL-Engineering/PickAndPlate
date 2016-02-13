@@ -43,7 +43,7 @@ import time
 #####################################
 # Global Variables
 #####################################
-CAL_POINT_DIST_MM = 25
+CAL_POINT_DIST_MM = 35
 
 NO_EMBRYO_THRESHOLD = 3
 
@@ -60,6 +60,7 @@ class PickAndPlateCycleHandler(QtCore.QThread):
     x_y_move_request_signal = QtCore.pyqtSignal(float, float)
     x_y_move_request_with_feedrate_signal = QtCore.pyqtSignal(float, float, float)
     z_move_request_signal = QtCore.pyqtSignal(float)
+    z_move_with_feedrate_request_signal = QtCore.pyqtSignal(float, float)
     a_move_request_signal = QtCore.pyqtSignal(int)
     light_change_signal = QtCore.pyqtSignal(int)
     motor_state_change_signal = QtCore.pyqtSignal(int)
@@ -116,6 +117,19 @@ class PickAndPlateCycleHandler(QtCore.QThread):
         self.dist_cal_y = 0
         self.mm_per_px = 0
 
+        self.run_embryo_type = ""
+
+        self.pick_height = 0
+        self.place_height = 0
+        self.pick_volume = 0
+        self.plate_min = 0
+        self.dish_min = 0
+
+        self.e_fall_time = 0
+        self.placement_dwell = 0
+        self.z_traverse_height = 20
+        self.z_vel = 0
+
         self.cropped_only_raw = None
         self.cycle_monitor_qimage = None
         self.last_pick_qimage = None
@@ -161,6 +175,8 @@ class PickAndPlateCycleHandler(QtCore.QThread):
         self.x_y_move_request_with_feedrate_signal.connect(
             self.main_window.controller.on_x_y_axis_move_with_feedrate_requested_slot)
         self.z_move_request_signal.connect(self.main_window.controller.on_z_axis_move_requested_slot)
+        self.z_move_with_feedrate_request_signal.connect(
+            self.main_window.controller.on_z_axis_move_with_feedrate_requested_slot)
         self.a_move_request_signal.connect(self.main_window.controller.on_a_axis_move_requested_slot)
         self.full_system_home_request_signal.connect(self.main_window.controller.on_full_system_homing_requested_slot)
         self.light_change_signal.connect(self.main_window.controller.on_light_change_request_signal_slot)
@@ -237,31 +253,32 @@ class PickAndPlateCycleHandler(QtCore.QThread):
             self.pick_positions_ready_signal.emit(embryo_x, embryo_y)
             self.make_current_and_last_pick_images(embryo_x_px, embryo_y_px)
 
-            traverse_height = 20
-            pick_depth = -18
-            place_depth = -16
-            pick_volume = 75
-            well_dwell = 500  # milliseconds
 
-            # self.logger.info("Center X: " + str(self.dish_x) + "\tX: " + str(embryo_x))
-            # self.logger.info("Center Y: " + str(self.dish_y) + "\tY: " + str(embryo_y))
+            pick_height_actual = self.pick_height + self.dish_min
+            place_depth_actual = self.place_height + self.plate_min
+
 
             # Move up and over to found embryo co-ordinates
-            self.move_z(traverse_height)
+            self.move_z(self.z_traverse_height)
             self.move_x_y(embryo_x, embryo_y)
 
             # Move to pick depth, suck up embryo, and move back up
-            self.move_z(pick_depth)
-            self.move_a(pick_volume)
-            self.move_z(traverse_height)
+            self.move_z(pick_height_actual)
+            self.move_a(self.pick_volume)
 
-            # Move to the next unused well on the plate, then go down and expel embryo
-            self.move_x_y_timed(self.cur_plate_x, self.cur_plate_y, 1.2)
-            self.move_z(place_depth)
-            self.msleep(well_dwell)
+            # Calculate timing for movement
+            z_seconds_pick = (abs(pick_height_actual - self.z_traverse_height)/self.z_vel)*60
+            z_seconds_place = (abs(place_depth_actual - self.z_traverse_height)/self.z_vel)*60
+            x_y_time_needed = self.e_fall_time - z_seconds_pick - z_seconds_place
+
+            # Move to the next unused well on the plate, then go down and drop embryo, all with timing
+            self.move_z_fixed_feedrate(self.z_traverse_height, self.z_vel)
+            self.move_x_y_timed(self.cur_plate_x, self.cur_plate_y, x_y_time_needed)
+            self.move_z_fixed_feedrate(place_depth_actual, self.z_vel)
+            self.msleep(self.placement_dwell)
 
             # Move pick head back up and to the waste container
-            self.move_z(traverse_height)
+            self.move_z(self.z_traverse_height)
             self.move_x_y(self.waste_x, self.waste_y)
 
             # Now that we're at the waste container, start looking for a new image
@@ -270,9 +287,9 @@ class PickAndPlateCycleHandler(QtCore.QThread):
 
             # Move down in waste and dispel any extra fluid
             self.move_z(-5)
-            self.move_a(-(pick_volume+90))
+            self.move_a(-(self.pick_volume+90))
             self.move_a(90)
-            self.move_z(traverse_height)
+            self.move_z(self.z_traverse_height)
 
             # Increment well
             if (self.cur_plate_y + 9) > (self.a1_y + (11*9)):
@@ -371,6 +388,13 @@ class PickAndPlateCycleHandler(QtCore.QThread):
         self.z_move_request_signal.emit(z)
         while not self.controller_command_complete:
             # self.logger.info("Waiting for z")
+            self.msleep(150)
+
+    def move_z_fixed_feedrate(self, z, feedrate):
+        self.controller_command_complete = False
+
+        self.z_move_with_feedrate_request_signal.emit(z, feedrate)
+        while not self.controller_command_complete:
             self.msleep(150)
 
     def move_a(self, a):
@@ -502,8 +526,26 @@ class PickAndPlateCycleHandler(QtCore.QThread):
         self.dist_cal_y = self.settings.value("system/system_calibration/distance_cal_y").toInt()[0]
         self.mm_per_px = CAL_POINT_DIST_MM / sqrt(pow(self.dist_cal_x, 2) + pow(self.dist_cal_y, 2))
 
+        self.plate_min = self.settings.value("system/system_calibration/plate_z_min").toDouble()[0]
+        self.dish_min = self.settings.value("system/system_calibration/dish_z_min").toDouble()[0]
+
         self.cur_plate_x = self.a1_x
         self.cur_plate_y = self.a1_y
+
+        self.run_embryo_type = self.settings.value("quick_settings/embryo_type").toString()
+
+        if self.run_embryo_type == "Dechorionated":
+            prefix = "d_"
+        else:
+            prefix = "c_"
+
+        self.z_vel = self.settings.value("system/plating_calibration/" + prefix + "z_velocity").toInt()[0]
+        self.placement_dwell = self.settings.value("system/plating_calibration/" + prefix + "placement_dwell").toInt()[0]
+        self.e_fall_time = self.settings.value("system/plating_calibration/" + prefix + "embryo_fall_time").toDouble()[0]
+        self.pick_height = self.settings.value("system/plating_calibration/" + prefix + "pick_height").toDouble()[0]
+        self.place_height = self.settings.value("system/plating_calibration/" + prefix + "place_height").toDouble()[0]
+        self.pick_volume = self.settings.value("system/plating_calibration/" + prefix + "pick_volume").toDouble()[0]
+
 
     def on_video_requested_image_ready_slot(self):
         self.cropped_only_raw = self.main_window.video.cropped_only_raw # USED TO BE A .COPY HERE

@@ -160,6 +160,9 @@ class SystemCalibration(QtCore.QObject):
         self.save_dish_button.clicked.connect(self.on_save_dish_center_clicked_slot)
         self.save_a1_button.clicked.connect(self.on_save_a1_center_clicked_slot)
         self.save_waste_button.clicked.connect(self.on_save_waste_center_clicked_slot)
+        self.save_clean_button.clicked.connect(self.on_save_clean_center_clicked_slot)
+        self.save_dish_min_button.clicked.connect(self.on_save_dish_min_clicked_slot)
+        self.save_plate_min_button.clicked.connect(self.on_save_plate_min_clicked_slot)
 
         self.full_home_button.clicked.connect(self.on_do_full_homing_clicked_slot)
         self.lights_on_button.clicked.connect(self.on_lights_on_clicked_slot)
@@ -331,6 +334,7 @@ class SystemCalibration(QtCore.QObject):
     def on_system_location_changed_slot(self, x, y, z, a):
         self.tinyg_x_location = x
         self.tinyg_y_location = y
+        self.tinyg_z_location = z
 
     def on_focus_or_exposure_changed_slot(self):
         self.camera_focus_exposure_changed_signal.emit(self.camera_focus_sb.value(), self.camera_exposure_sb.value())

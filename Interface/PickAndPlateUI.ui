@@ -1574,7 +1574,7 @@ QTabBar::tab:last{
 }</string>
           </property>
           <property name="currentIndex">
-           <number>2</number>
+           <number>0</number>
           </property>
           <widget class="QWidget" name="tab_6">
            <attribute name="title">
@@ -1595,7 +1595,7 @@ QToolBox::tab:selected{
 }</string>
                 </property>
                 <property name="currentIndex">
-                 <number>0</number>
+                 <number>1</number>
                 </property>
                 <property name="tabSpacing">
                  <number>3</number>
@@ -1759,8 +1759,11 @@ QToolBox::tab:selected{
                         <property name="styleSheet">
                          <string notr="true">background-color:rgb(55,55,55)</string>
                         </property>
+                        <property name="decimals">
+                         <number>1</number>
+                        </property>
                         <property name="singleStep">
-                         <double>0.010000000000000</double>
+                         <double>0.100000000000000</double>
                         </property>
                        </widget>
                       </item>
@@ -1865,6 +1868,65 @@ QToolBox::tab:selected{
                       </property>
                      </spacer>
                     </item>
+                    <item row="2" column="1">
+                     <layout class="QHBoxLayout" name="horizontalLayout_2">
+                      <item>
+                       <spacer name="horizontalSpacer_92">
+                        <property name="orientation">
+                         <enum>Qt::Horizontal</enum>
+                        </property>
+                        <property name="sizeHint" stdset="0">
+                         <size>
+                          <width>40</width>
+                          <height>20</height>
+                         </size>
+                        </property>
+                       </spacer>
+                      </item>
+                      <item>
+                       <widget class="QLabel" name="label_98">
+                        <property name="text">
+                         <string>Embryo Fall Time (seconds)</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item>
+                       <widget class="QDoubleSpinBox" name="dechorionated_embryo_fall_time_spin_box">
+                        <property name="styleSheet">
+                         <string notr="true">background-color:rgb(55,55,55)</string>
+                        </property>
+                        <property name="decimals">
+                         <number>2</number>
+                        </property>
+                        <property name="minimum">
+                         <double>0.100000000000000</double>
+                        </property>
+                        <property name="maximum">
+                         <double>20.000000000000000</double>
+                        </property>
+                        <property name="singleStep">
+                         <double>0.010000000000000</double>
+                        </property>
+                        <property name="value">
+                         <double>1.000000000000000</double>
+                        </property>
+                       </widget>
+                      </item>
+                      <item>
+                       <spacer name="horizontalSpacer_93">
+                        <property name="orientation">
+                         <enum>Qt::Horizontal</enum>
+                        </property>
+                        <property name="sizeHint" stdset="0">
+                         <size>
+                          <width>40</width>
+                          <height>20</height>
+                         </size>
+                        </property>
+                       </spacer>
+                      </item>
+                     </layout>
+                    </item>
                    </layout>
                   </item>
                   <item>
@@ -1928,8 +1990,8 @@ p, li { white-space: pre-wrap; }
                   <rect>
                    <x>0</x>
                    <y>0</y>
-                   <width>419</width>
-                   <height>175</height>
+                   <width>736</width>
+                   <height>258</height>
                   </rect>
                  </property>
                  <attribute name="label">
@@ -2082,8 +2144,14 @@ p, li { white-space: pre-wrap; }
                         <property name="styleSheet">
                          <string notr="true">background-color:rgb(55,55,55)</string>
                         </property>
+                        <property name="decimals">
+                         <number>1</number>
+                        </property>
+                        <property name="maximum">
+                         <double>100.000000000000000</double>
+                        </property>
                         <property name="singleStep">
-                         <double>0.010000000000000</double>
+                         <double>0.100000000000000</double>
                         </property>
                        </widget>
                       </item>
@@ -2187,6 +2255,65 @@ p, li { white-space: pre-wrap; }
                        </size>
                       </property>
                      </spacer>
+                    </item>
+                    <item row="2" column="1">
+                     <layout class="QHBoxLayout" name="horizontalLayout_16">
+                      <item>
+                       <spacer name="horizontalSpacer_94">
+                        <property name="orientation">
+                         <enum>Qt::Horizontal</enum>
+                        </property>
+                        <property name="sizeHint" stdset="0">
+                         <size>
+                          <width>40</width>
+                          <height>20</height>
+                         </size>
+                        </property>
+                       </spacer>
+                      </item>
+                      <item>
+                       <widget class="QLabel" name="label_99">
+                        <property name="text">
+                         <string>Embryo Fall Time (seconds)</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item>
+                       <widget class="QDoubleSpinBox" name="chorionated_embryo_fall_time_spin_box">
+                        <property name="styleSheet">
+                         <string notr="true">background-color:rgb(55,55,55)</string>
+                        </property>
+                        <property name="decimals">
+                         <number>2</number>
+                        </property>
+                        <property name="minimum">
+                         <double>0.100000000000000</double>
+                        </property>
+                        <property name="maximum">
+                         <double>20.000000000000000</double>
+                        </property>
+                        <property name="singleStep">
+                         <double>0.010000000000000</double>
+                        </property>
+                        <property name="value">
+                         <double>1.000000000000000</double>
+                        </property>
+                       </widget>
+                      </item>
+                      <item>
+                       <spacer name="horizontalSpacer_95">
+                        <property name="orientation">
+                         <enum>Qt::Horizontal</enum>
+                        </property>
+                        <property name="sizeHint" stdset="0">
+                         <size>
+                          <width>40</width>
+                          <height>20</height>
+                         </size>
+                        </property>
+                       </spacer>
+                      </item>
+                     </layout>
                     </item>
                    </layout>
                   </item>
@@ -2618,8 +2745,8 @@ p, li { white-space: pre-wrap; }
                   <rect>
                    <x>0</x>
                    <y>0</y>
-                   <width>478</width>
-                   <height>194</height>
+                   <width>414</width>
+                   <height>193</height>
                   </rect>
                  </property>
                  <attribute name="label">

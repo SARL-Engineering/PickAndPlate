@@ -254,13 +254,13 @@ class SerialHandler(QtCore.QThread):
         self.serial_out_queue.append("^x\n")
 
         # self.serial_out_queue.append(self.convert_to_json({'xvm':12500}))
-        self.serial_out_queue.append(self.convert_to_json({'yvm':10000}))
-        #self.serial_out_queue.append(self.convert_to_json({'zvm':5000}))
+        # self.serial_out_queue.append(self.convert_to_json({'yvm':10000}))
+        # self.serial_out_queue.append(self.convert_to_json({'zvm':5000}))
         # self.serial_out_queue.append(self.convert_to_json({'zzb':6.5}))
         # self.serial_out_queue.append(self.convert_to_json({'ajm':1000}))
         # self.serial_out_queue.append(self.convert_to_json({'xjm':2000}))
         # self.serial_out_queue.append(self.convert_to_json({'yjm':2000}))
-        # self.serial_out_queue.append(self.convert_to_json({'zjh':300}))
+        self.serial_out_queue.append(self.convert_to_json({'zfr':8000}))
         # self.serial_out_queue.append(self.convert_to_json({'zjm':300}))
         # self.serial_out_queue.append(self.convert_to_json({'mt':20}))
 
@@ -488,6 +488,8 @@ class PickAndPlateController(QtCore.QThread):
                     self.full_system_homing_request()
                 elif current_command['Command'] == 'Z Move ABS':
                     self.z_axis_move_request(current_command['Z'])
+                elif current_command['Command'] == 'Z Move ABS w/Feedrate':
+                    self.z_axis_move_with_feedrate_request(current_command['Z'], current_command['F'])
                 elif current_command['Command'] == 'Z Move REL':
                     self.z_axis_move_relative_request(current_command['Z'])
                 elif current_command['Command'] == 'Z Home':
@@ -545,7 +547,7 @@ class PickAndPlateController(QtCore.QThread):
 
     ########## Methods for all axes ##########
     def initial_system_homing_request(self):
-        self.tinyg_dump_settings_signal.emit()
+        #self.tinyg_dump_settings_signal.emit()
         self.light_change_requested(500)
         self.a_axis_home_request()
         self.a_axis_move_request(100)
@@ -553,7 +555,6 @@ class PickAndPlateController(QtCore.QThread):
         self.x_y_move_relative_request(-5, -10)
         self.x_y_home_request()
         self.light_change_requested(0)
-
 
     def on_initial_system_homing_requested_slot(self):
         self.command_queue.append({'Command':'Initial Homing'})
@@ -588,12 +589,24 @@ class PickAndPlateController(QtCore.QThread):
         self.timing_start_time = time.time()
         self.command_queue.append({'Command':'Z Move ABS', 'Z':z})
 
+    def on_z_axis_move_with_feedrate_requested_slot(self, z, f):
+        self.command_queue.append({'Command':'Z Move ABS w/Feedrate', 'Z':z, 'F':f})
+
     def on_z_axis_move_relative_requested_slot(self, z):
         self.timing_start_time = time.time()
         self.command_queue.append({'Command':'Z Move REL', 'Z':z})
 
     def z_axis_move_request(self, z):
         self.tinyg_move_absolute_signal.emit(IGNORE_VALUE, IGNORE_VALUE, z, IGNORE_VALUE)
+
+        self.msleep(350)
+        while self.tinyg_machine_state == MOTION_RUNNING_STATE:
+            self.msleep(50)
+
+        self.controller_command_complete_signal.emit()
+
+    def z_axis_move_with_feedrate_request(self, z, f):
+        self.tinyg_move_absolute_with_feedrate_signal.emit(IGNORE_VALUE, IGNORE_VALUE, z, IGNORE_VALUE, f)
 
         self.msleep(350)
         while self.tinyg_machine_state == MOTION_RUNNING_STATE:
