@@ -66,6 +66,11 @@ class DetectionCalibration(QtCore.QObject):
         self.master = master
 
         # ########## References to gui objects ##########
+        self.embryo_set_gb = self.main_window.detection_embryo_settings_group_box
+        self.embryo_min_dist_sb = self.main_window.detection_embryo_min_dist_spin_box
+        self.embryo_min_size_sb = self.main_window.detection_min_embryo_size_spin_box
+        self.embryo_max_size_sb = self.main_window.detection_max_embryo_size_spin_box
+
         self.min_binary_thresh_sb = self.main_window.detection_min_binary_threshold_spin_box
         self.min_blob_dist_sb = self.main_window.detection_min_distance_between_blobs_spin_box
         self.min_repeat_sb = self.main_window.detection_min_repeatability_spin_box
@@ -73,9 +78,6 @@ class DetectionCalibration(QtCore.QObject):
         self.blob_thresh_min_sb = self.main_window.detection_blob_threshold_min_spin_box
         self.blob_thresh_max_sb = self.main_window.detection_blob_threshold_max_spin_box
         self.blob_thresh_step_sb = self.main_window.detection_blob_threshold_step_spin_box
-
-        self.blob_color_gb = self.main_window.detection_blob_color_group_box
-        self.blob_color_sb = self.main_window.detection_blob_color_spin_box
 
         self.blob_area_gb = self.main_window.detection_blob_area_group_box
         self.blob_area_min_sb = self.main_window.detection_blob_area_min_spin_box
@@ -116,6 +118,11 @@ class DetectionCalibration(QtCore.QObject):
         self.connect_signals_to_slots()
 
     def connect_signals_to_slots(self):
+        self.embryo_set_gb.toggled.connect(self.save_changed_values_to_settings_slot)
+        self.embryo_min_dist_sb.valueChanged.connect(self.save_changed_values_to_settings_slot)
+        self.embryo_min_size_sb.valueChanged.connect(self.save_changed_values_to_settings_slot)
+        self.embryo_max_size_sb.valueChanged.connect(self.save_changed_values_to_settings_slot)
+
         self.min_binary_thresh_sb.valueChanged.connect(self.save_changed_values_to_settings_slot)
         self.min_blob_dist_sb.valueChanged.connect(self.save_changed_values_to_settings_slot)
         self.min_repeat_sb.valueChanged.connect(self.save_changed_values_to_settings_slot)
@@ -123,9 +130,6 @@ class DetectionCalibration(QtCore.QObject):
         self.blob_thresh_min_sb.valueChanged.connect(self.save_changed_values_to_settings_slot)
         self.blob_thresh_max_sb.valueChanged.connect(self.save_changed_values_to_settings_slot)
         self.blob_thresh_step_sb.valueChanged.connect(self.save_changed_values_to_settings_slot)
-
-        self.blob_color_gb.toggled.connect(self.save_changed_values_to_settings_slot)
-        self.blob_color_sb.valueChanged.connect(self.save_changed_values_to_settings_slot)
 
         self.blob_area_gb.toggled.connect(self.save_changed_values_to_settings_slot)
         self.blob_area_min_sb.valueChanged.connect(self.save_changed_values_to_settings_slot)
@@ -172,6 +176,15 @@ class DetectionCalibration(QtCore.QObject):
             else:
                 prefix = "c_"
 
+            self.settings.setValue("system/detection_calibration/" + prefix + "embryo_settings_enabled",
+                                   int(self.embryo_set_gb.isChecked()))
+            self.settings.setValue("system/detection_calibration/" + prefix + "embryo_min_dist",
+                                   self.embryo_min_dist_sb.value())
+            self.settings.setValue("system/detection_calibration/" + prefix + "embryo_min_size",
+                                   self.embryo_min_size_sb.value())
+            self.settings.setValue("system/detection_calibration/" + prefix + "embryo_max_size",
+                                   self.embryo_max_size_sb.value())
+
             self.settings.setValue("system/detection_calibration/" + prefix + "min_binary_thresh",
                                    self.min_binary_thresh_sb.value())
             self.settings.setValue("system/detection_calibration/" + prefix + "min_blob_distance",
@@ -185,11 +198,6 @@ class DetectionCalibration(QtCore.QObject):
                                    self.blob_thresh_max_sb.value())
             self.settings.setValue("system/detection_calibration/" + prefix + "blob_thresh_step",
                                    self.blob_thresh_step_sb.value())
-
-            self.settings.setValue("system/detection_calibration/" + prefix + "blob_color_enabled",
-                                   int(self.blob_color_gb.isChecked()))
-            self.settings.setValue("system/detection_calibration/" + prefix + "blob_color",
-                                   self.blob_color_sb.value())
 
             self.settings.setValue("system/detection_calibration/" + prefix + "blob_area_enabled",
                                    int(self.blob_area_gb.isChecked()))
@@ -227,6 +235,15 @@ class DetectionCalibration(QtCore.QObject):
         else:
             prefix = "c_"
 
+        self.embryo_set_gb.setChecked(
+            self.settings.value("system/detection_calibration/" + prefix + "embryo_settings_enabled").toInt()[0])
+        self.embryo_min_dist_sb.setValue(
+            self.settings.value("system/detection_calibration/" + prefix + "embryo_min_dist").toDouble()[0])
+        self.embryo_min_size_sb.setValue(
+            self.settings.value("system/detection_calibration/" + prefix + "embryo_min_size").toDouble()[0])
+        self.embryo_max_size_sb.setValue(
+            self.settings.value("system/detection_calibration/" + prefix + "embryo_max_size").toDouble()[0])
+
         self.min_binary_thresh_sb.setValue(
             self.settings.value("system/detection_calibration/" + prefix + "min_binary_thresh").toInt()[0])
         self.min_blob_dist_sb.setValue(
@@ -240,11 +257,6 @@ class DetectionCalibration(QtCore.QObject):
             self.settings.value("system/detection_calibration/" + prefix + "blob_thresh_max").toInt()[0])
         self.blob_thresh_step_sb.setValue(
             self.settings.value("system/detection_calibration/" + prefix + "blob_thresh_step").toInt()[0])
-
-        self.blob_color_gb.setChecked(
-            self.settings.value("system/detection_calibration/" + prefix + "blob_color_enabled").toInt()[0])
-        self.blob_color_sb.setValue(
-            self.settings.value("system/detection_calibration/" + prefix + "blob_color").toInt()[0])
 
         self.blob_area_gb.setChecked(
             self.settings.value("system/detection_calibration/" + prefix + "blob_area_enabled").toInt()[0])

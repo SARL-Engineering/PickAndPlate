@@ -37,6 +37,7 @@ import cv2
 import numpy
 import qimage2ndarray
 import subprocess
+from math import sqrt, isnan, pow
 from datetime import datetime
 
 # Custom imports
@@ -57,7 +58,8 @@ CV_CAP_PROP_FRAME_HEIGHT = 4
 CV_CAP_PROP_FPS = 5
 CV_CAP_PROP_FOURCC = 6
 
-MUTEX = QtCore.QMutex()
+RED = (255, 0, 0)
+GREEN = (0, 255, 0)
 
 #####################################
 # FrameGrabber Class
@@ -161,7 +163,13 @@ class PickAndPlateVideo(QtCore.QThread):
 
         self.current_params = cv2.SimpleBlobDetector_Params()
         self.keypoints = None
+        self.valid_embryos = None
+        self.pickable_embryos = None
 
+        self.embryo_set_en = 0
+        self.embryo_min_dist = 0
+        self.embryo_min_size = 0
+        self.embryo_max_size = 0
 
         self.min_thresh = 0
         self.x_res = 0
@@ -266,7 +274,6 @@ class PickAndPlateVideo(QtCore.QThread):
 
         elif self.video_output_type == "Masked Threshold":
             frame = cv2.cvtColor(self.raw_frame, cv2.COLOR_RGB2GRAY)
-            return_val, frame = cv2.threshold(frame, self.min_thresh, 255, cv2.cv.CV_THRESH_BINARY)
 
             mask_frame = numpy.zeros((self.y_res, self.x_res), numpy.uint8)
             cv2.circle(mask_frame, (self.x_center, self.y_center), (self.crop_dim_half - self.usable_offset), 255, -1)
@@ -276,26 +283,24 @@ class PickAndPlateVideo(QtCore.QThread):
 
         elif self.video_output_type == "Detected Threshold":
             frame = cv2.cvtColor(self.raw_frame, cv2.COLOR_RGB2GRAY)
-            return_val, frame = cv2.threshold(frame, self.min_thresh, 255, cv2.cv.CV_THRESH_BINARY)
 
             mask_frame = numpy.zeros((self.y_res, self.x_res), numpy.uint8)
             cv2.circle(mask_frame, (self.x_center, self.y_center), (self.crop_dim_half - self.usable_offset), 255, -1)
 
             frame = cv2.bitwise_and(frame, mask_frame)
 
-            frame = self.masked_detect_and_overlay(frame, frame)
+            frame = self.masked_detect_and_overlay(frame, frame, "GRAY")
 
             frame = self.crop_image(frame)
         elif self.video_output_type == "Original w/ Detected":
             frame = cv2.cvtColor(self.raw_frame, cv2.COLOR_RGB2GRAY)
-            return_val, frame = cv2.threshold(frame, self.min_thresh, 255, cv2.cv.CV_THRESH_BINARY)
 
             mask_frame = numpy.zeros((self.y_res, self.x_res), numpy.uint8)
             cv2.circle(mask_frame, (self.x_center, self.y_center), (self.crop_dim_half - self.usable_offset), 255, -1)
 
             frame = cv2.bitwise_and(frame, mask_frame)
 
-            frame = self.masked_detect_and_overlay(frame, self.raw_frame)
+            frame = self.masked_detect_and_overlay(frame, self.raw_frame, "BGR")
 
             frame = self.crop_image(frame)
 
@@ -340,27 +345,20 @@ class PickAndPlateVideo(QtCore.QThread):
             self.setup_blob_params()
             self.setup_params_once = False
 
-            # self.min_thresh = self.settings.value("system/detection_calibration/min_binary_thresh").toInt()[0]
-            # self.x_res = self.settings.value("system/system_settings/camera_res_width").toInt()[0]
-            # self.y_res = self.settings.value("system/system_settings/camera_res_height").toInt()[0]
-            # self.x_center = self.settings.value("system/system_calibration/crop_x_center").toInt()[0]
-            # self.y_center = self.settings.value("system/system_calibration/crop_y_center").toInt()[0]
-            # self.crop_dim_half = (self.settings.value("system/system_calibration/crop_dimension").toInt()[0] / 2)
-            # self.usable_offset = self.settings.value("system/system_calibration/usable_area_offset").toInt()[0]
 
         if  not self.wait_for_image_req:
             self.wait_for_image_req = True
 
-            frame = cv2.cvtColor(self.raw_frame, cv2.COLOR_BGR2GRAY)  # convert color image to grey
-            return_val, frame = cv2.threshold(frame, self.min_thresh, 255, cv2.cv.CV_THRESH_BINARY)  # apply binary threshold to image
-            mask_frame = numpy.zeros((self.y_res, self.x_res), numpy.uint8)  # Setup a masking frame the size of the input frame with zeros
-            cv2.circle(mask_frame, (self.x_center, self.y_center), (self.crop_dim_half - self.usable_offset), 255, -1)  # Fill the mask with 1's for a circle where the dish is in the image
-            frame = cv2.bitwise_and(frame, mask_frame)  # Apply the mask to the input frame
-            detected_frame = self.masked_detect_and_overlay(frame, self.raw_frame)  # Send the masked frame to blob detection
-            frame = self.crop_image(detected_frame)  # Crop image to size for display on gui
-
-            # Determine which embryo to pick
             try:
+                frame = cv2.cvtColor(self.raw_frame, cv2.COLOR_BGR2GRAY)  # convert color image to grey
+                #return_val, frame = cv2.threshold(frame, self.min_thresh, 255, cv2.cv.CV_THRESH_BINARY)  # apply binary threshold to image
+                mask_frame = numpy.zeros((self.y_res, self.x_res), numpy.uint8)  # Setup a masking frame the size of the input frame with zeros
+                cv2.circle(mask_frame, (self.x_center, self.y_center), (self.crop_dim_half - self.usable_offset), 255, -1)  # Fill the mask with 1's for a circle where the dish is in the image
+                frame = cv2.bitwise_and(frame, mask_frame)  # Apply the mask to the input frame
+                detected_frame = self.masked_detect_and_overlay(frame, self.raw_frame, "BGR")  # Send the masked frame to blob detection
+                frame = self.crop_image(detected_frame)  # Crop image to size for display on gui
+
+
                 self.cropped_only_raw = detected_frame
 
                 resized = cv2.resize(frame, (200, 200))
@@ -373,11 +371,27 @@ class PickAndPlateVideo(QtCore.QThread):
 
 
 
-    def masked_detect_and_overlay(self, input_frame, overlay_frame):
+    def masked_detect_and_overlay(self, input_frame, overlay_frame, overlay_type):
         detector = cv2.SimpleBlobDetector(self.current_params)
         self.keypoints = detector.detect(input_frame)
         self.number_embryos_detected_signal.emit(len(self.keypoints))
-        output_frame = cv2.drawKeypoints(overlay_frame, self.keypoints, color=(255, 0, 0))
+
+        if self.embryo_set_en:
+            if overlay_type == "BGR":
+                output_frame = overlay_frame
+            else:
+                output_frame = cv2.cvtColor(overlay_frame, cv2.COLOR_GRAY2BGR)
+
+            self.valid_embryos = self.get_valid_embryos(self.keypoints)
+            self.pickable_embryos = self.get_pickable_embryos(self.valid_embryos)
+
+            output_frame = self.draw_embryos(output_frame, self.valid_embryos, RED)
+            output_frame = self.draw_embryos(output_frame, self.pickable_embryos, GREEN)
+
+        else:
+            output_frame = cv2.drawKeypoints(overlay_frame, self.keypoints, color=(255, 0, 0))
+
+        self.number_embryos_detected_signal.emit(len(self.pickable_embryos))
         return output_frame
 
     def setup_blob_params(self):
@@ -391,8 +405,6 @@ class PickAndPlateVideo(QtCore.QThread):
         blob_thresh_min = self.settings.value("system/detection_calibration/" + prefix + "blob_thresh_min").toInt()[0]
         blob_thresh_max = self.settings.value("system/detection_calibration/" + prefix + "blob_thresh_max").toInt()[0]
         blob_thresh_step = self.settings.value("system/detection_calibration/" + prefix + "blob_thresh_step").toInt()[0]
-        blob_color_en = self.settings.value("system/detection_calibration/" + prefix + "blob_color_enabled").toInt()[0]
-        blob_color_val = self.settings.value("system/detection_calibration/" + prefix + "blob_color").toInt()[0]
         blob_area_en = self.settings.value("system/detection_calibration/" + prefix + "blob_area_enabled").toInt()[0]
         blob_area_min = self.settings.value("system/detection_calibration/" + prefix + "blob_area_min").toDouble()[0]
         blob_area_max = self.settings.value("system/detection_calibration/" + prefix + "blob_area_max").toDouble()[0]
@@ -413,11 +425,8 @@ class PickAndPlateVideo(QtCore.QThread):
         self.current_params.maxThreshold = blob_thresh_max
         self.current_params.thresholdStep = blob_thresh_step
 
-        if blob_color_en:
-            self.current_params.filterByColor = True
-            self.current_params.blobColor = blob_color_val
-        else:
-            self.current_params.filterByColor = False
+
+        self.current_params.filterByColor = False
 
         if blob_area_en:
             self.current_params.filterByArea = True
@@ -447,13 +456,68 @@ class PickAndPlateVideo(QtCore.QThread):
         else:
             self.current_params.filterByInertia = False
 
+        self.embryo_set_en = self.settings.value("system/detection_calibration/" + prefix + "embryo_settings_enabled").toInt()[0]
+        self.embryo_min_dist = self.settings.value("system/detection_calibration/" + prefix + "embryo_min_dist").toDouble()[0]
+        self.embryo_min_size = self.settings.value("system/detection_calibration/" + prefix + "embryo_min_size").toDouble()[0]
+        self.embryo_max_size = self.settings.value("system/detection_calibration/" + prefix + "embryo_max_size").toDouble()[0]
+
+
+        # self.logger.info("Min Dist:" + str(self.embryo_min_dist))
+        # self.logger.info("Min Size:" + str(self.embryo_min_size))
+        # self.logger.info("Max Size:" + str(self.embryo_max_size))
+
         self.min_thresh = self.settings.value("system/detection_calibration/" + prefix + "min_binary_thresh").toInt()[0]
+        #FIXME: thresholding testing
+        self.min_thresh = blob_thresh_min
         self.x_res = self.settings.value("system/system_settings/camera_res_width").toInt()[0]
         self.y_res = self.settings.value("system/system_settings/camera_res_height").toInt()[0]
         self.x_center = self.settings.value("system/system_calibration/crop_x_center").toInt()[0]
         self.y_center = self.settings.value("system/system_calibration/crop_y_center").toInt()[0]
         self.crop_dim_half = (self.settings.value("system/system_calibration/crop_dimension").toInt()[0] / 2)
         self.usable_offset = self.settings.value("system/system_calibration/usable_area_offset").toInt()[0]
+
+    def get_valid_embryos(self, keypoints):
+        valid = []
+
+        for point in self.keypoints:
+                if (not isnan(point.pt[0])) and (not isnan(point.pt[1])) and (not isnan(point.size)):
+                    valid.append([point.pt[0], point.pt[1], point.size])
+
+        return valid
+
+    def get_pickable_embryos(self, valid):
+        pickable = []
+        min_between_embryos = self.embryo_min_dist
+        min_embryo_dia = self.embryo_min_size
+        max_embryo_dia = self.embryo_max_size
+
+        for embryo in valid:
+            x = embryo[0]
+            y = embryo[1]
+            dia = embryo[2]
+
+            if (dia >= min_embryo_dia) and (dia <= max_embryo_dia):
+                found_too_close = False
+                for comp_embryo in valid:
+                    c_x = comp_embryo[0]
+                    c_y = comp_embryo[1]
+                    c_dia = comp_embryo[2]
+
+                    if (x == c_x) and (y == c_y):
+                        pass
+                    elif (sqrt(pow(abs(x-c_x), 2) + pow(abs(y-c_y), 2))-(dia/2)-(c_dia/2)) < min_between_embryos:
+                        found_too_close = True
+                        break
+                if not found_too_close:
+                    pickable.append(embryo)
+
+        return pickable
+
+    @staticmethod
+    def draw_embryos(frame, embryos, color):
+        for embryo in embryos:
+            cv2.circle(frame, (int(embryo[0]), int(embryo[1])), int(embryo[2]), color, -1, cv2.CV_AA)
+        return frame
 
     @staticmethod
     def convert_to_qimage(input_matrix):
@@ -475,8 +539,8 @@ class PickAndPlateVideo(QtCore.QThread):
     def get_camera_frame(self):
         #self.raw_frame = cv2.imread('images/embryo_image.png', cv2.IMREAD_COLOR)
         return_val, self.raw_frame = self.video_camera.retrieve()
-        filename = datetime.now().strftime("RawImage__%Y-%m-%d___%H-%M-%S.png")
-        cv2.imwrite("/home/debian/screen_dumps/" + filename, self.raw_frame)
+        #filename = datetime.now().strftime("RawImage__%Y-%m-%d___%H-%M-%S.png")
+        #cv2.imwrite("/home/debian/screen_dumps/" + filename, self.raw_frame)
 
     def on_general_camera_settings_changed_slot(self):
         self.settings.sync()

@@ -137,6 +137,8 @@ class PickAndPlateCycleHandler(QtCore.QThread):
 
         self.full_run_keypoints_array = []
         self.current_frame_keypoints = None
+        self.current_frame_valid = None
+        self.current_frame_pickable = None
 
         self.cur_plate_x = None
         self.cur_plate_y = None
@@ -231,7 +233,7 @@ class PickAndPlateCycleHandler(QtCore.QThread):
             self.cycle_run_image_request_signal.emit()
             self.set_motors(True)
             self.msleep(100)
-
+        #FIXME: NEED TO CHANGE WHAT ITS USING TO FIND EMBRYOS
         embryo_x_px = 0
         embryo_y_px = 0
 
@@ -528,7 +530,7 @@ class PickAndPlateCycleHandler(QtCore.QThread):
 
         self.plate_min = self.settings.value("system/system_calibration/plate_z_min").toDouble()[0]
         self.dish_min = self.settings.value("system/system_calibration/dish_z_min").toDouble()[0]
-
+        #FIXME: CHECK IF PRECISION IS LOST HERE.......
         self.cur_plate_x = self.a1_x
         self.cur_plate_y = self.a1_y
 
@@ -548,8 +550,10 @@ class PickAndPlateCycleHandler(QtCore.QThread):
 
 
     def on_video_requested_image_ready_slot(self):
-        self.cropped_only_raw = self.main_window.video.cropped_only_raw # USED TO BE A .COPY HERE
+        self.cropped_only_raw = self.main_window.video.cropped_only_raw
         self.current_frame_keypoints = self.main_window.video.keypoints
+        self.current_frame_valid = self.main_window.video.valid_embryos
+        self.current_frame_pickable = self.main_window.video.pickable_embryos
         self.data_received = True
 
     def on_controller_command_completed_slot(self):
