@@ -260,9 +260,9 @@ class SerialHandler(QtCore.QThread):
         # self.serial_out_queue.append(self.convert_to_json({'ajm':1000}))
         # self.serial_out_queue.append(self.convert_to_json({'xjm':2000}))
         # self.serial_out_queue.append(self.convert_to_json({'yjm':2000}))
-        self.serial_out_queue.append(self.convert_to_json({'zfr':8000}))
-        # self.serial_out_queue.append(self.convert_to_json({'zjm':300}))
-        # self.serial_out_queue.append(self.convert_to_json({'mt':20}))
+        # self.serial_out_queue.append(self.convert_to_json({'afr':8000}))
+        # self.serial_out_queue.append(self.convert_to_json({'avm':8000}))
+        # self.serial_out_queue.append(self.convert_to_json({'ajm':2000}))
 
     def on_motor_state_change_requested_slot(self, state):
         if state:
@@ -482,6 +482,7 @@ class PickAndPlateController(QtCore.QThread):
 
                 if current_command['Command'] == 'System Initialization':
                     self.initial_system_homing_request()
+                    self.light_change_requested(0)
                 if current_command['Command'] == 'Initial Homing':
                     self.initial_system_homing_request()
                 elif current_command['Command'] == 'Full Homing':
@@ -548,13 +549,12 @@ class PickAndPlateController(QtCore.QThread):
     ########## Methods for all axes ##########
     def initial_system_homing_request(self):
         #self.tinyg_dump_settings_signal.emit()
-        self.light_change_requested(500)
-        self.a_axis_home_request()
-        self.a_axis_move_request(100)
+        self.light_change_requested(1000)
         self.z_home_request(ROUGH)
         self.x_y_move_relative_request(-5, -10)
+        self.a_axis_home_request()
+        self.a_axis_move_request(100)
         self.x_y_home_request()
-        self.light_change_requested(0)
 
     def on_initial_system_homing_requested_slot(self):
         self.command_queue.append({'Command':'Initial Homing'})
@@ -565,7 +565,7 @@ class PickAndPlateController(QtCore.QThread):
 
         self.initial_system_homing_request()
 
-        self.light_change_requested(500)
+        self.light_change_requested(1000)
         self.x_y_move_request(precision_z_x_center, precision_z_y_center)
         self.z_axis_move_request(-25)
         self.z_home_request(FINE)
@@ -576,7 +576,6 @@ class PickAndPlateController(QtCore.QThread):
             self.x_y_move_request(0, 0)
 
         self.z_axis_move_request(0)
-        self.light_change_requested(0)
 
         self.controller_init_complete_signal.emit()
 

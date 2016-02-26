@@ -179,6 +179,9 @@ class PickAndPlateVideo(QtCore.QThread):
         self.crop_dim_half = 0
         self.usable_offset = 0
 
+        self.take_image = False
+        self.image_count = 0
+
         # ########## Make signal/slot connections ##########
         self.connect_signals_to_slots()
 
@@ -539,8 +542,13 @@ class PickAndPlateVideo(QtCore.QThread):
     def get_camera_frame(self):
         #self.raw_frame = cv2.imread('images/embryo_image.png', cv2.IMREAD_COLOR)
         return_val, self.raw_frame = self.video_camera.retrieve()
-        #filename = datetime.now().strftime("RawImage__%Y-%m-%d___%H-%M-%S.png")
-        #cv2.imwrite("/home/debian/screen_dumps/" + filename, self.raw_frame)
+        if self.take_image:
+            if self.image_count >= 12:
+                filename = datetime.now().strftime("RawImage__%Y-%m-%d___%H-%M-%S.png")
+                cv2.imwrite("/home/debian/screen_dumps/" + filename, self.raw_frame)
+                self.take_image = False
+            else:
+                self.image_count += 1
 
     def on_general_camera_settings_changed_slot(self):
         self.settings.sync()
@@ -563,6 +571,8 @@ class PickAndPlateVideo(QtCore.QThread):
     def cycle_run_changed_slot(self, enabled_state, which_profile):
         if enabled_state:
             self.detection_profile_name = which_profile
+            self.take_image = True
+            self.image_count = 0
             self.setup_params_once = True
 
         self.video_being_used = enabled_state

@@ -33,10 +33,11 @@ __status__ = "Development"
 # Python native imports
 from PyQt4 import QtCore, QtGui
 import logging
-from math import sqrt, pow, isnan
+from math import sqrt, pow
 import qimage2ndarray
 import cv2
 import time
+from random import randint
 
 # Custom imports
 
@@ -50,6 +51,10 @@ NO_EMBRYO_THRESHOLD = 3
 BUTTON_CONTINUE = 0
 BUTTON_EXIT = 1
 BUTTON_WAIT = 2
+
+X_VAL = 0
+Y_VAL = 1
+SIZE_VAL = 2
 
 
 #####################################
@@ -234,19 +239,23 @@ class PickAndPlateCycleHandler(QtCore.QThread):
             self.set_motors(True)
             self.msleep(100)
         #FIXME: NEED TO CHANGE WHAT ITS USING TO FIND EMBRYOS
-        embryo_x_px = 0
-        embryo_y_px = 0
+        # embryo_x_px = 0
+        # embryo_y_px = 0
+        #
+        # for point in self.current_frame_keypoints:
+        #     if (not isnan(point.pt[0])) and (not isnan(point.pt[1])):
+        #         embryo_x_px = point.pt[0]
+        #         embryo_y_px = point.pt[1]
+        #         break
 
-        for point in self.current_frame_keypoints:
-            if (not isnan(point.pt[0])) and (not isnan(point.pt[1])):
-                embryo_x_px = point.pt[0]
-                embryo_y_px = point.pt[1]
-                break
+        if self.current_frame_pickable:
+            rand_embryo = randint(0, len(self.current_frame_pickable)-1)
+            embryo_x_px = self.current_frame_pickable[rand_embryo][X_VAL]
+            embryo_y_px = self.current_frame_pickable[rand_embryo][Y_VAL]
 
-        # self.logger.info("Center X: " + str(self.dish_center_px_x) + "\tX: " + str(embryo_x_px))
-        # self.logger.info("Center Y: " + str(self.dish_center_px_y) + "\tY: " + str(embryo_y_px))
+            # self.logger.info("Center X: " + str(self.dish_center_px_x) + "\tX: " + str(embryo_x_px))
+            # self.logger.info("Center Y: " + str(self.dish_center_px_y) + "\tY: " + str(embryo_y_px))
 
-        if embryo_x_px and embryo_y_px:
             self.no_embryo_count = 0
 
             embryo_x = (self.dish_x - ((embryo_x_px - self.dish_center_px_x) * self.mm_per_px))
@@ -288,7 +297,7 @@ class PickAndPlateCycleHandler(QtCore.QThread):
             self.data_received = False
 
             # Move down in waste and dispel any extra fluid
-            self.move_z(-5)
+            # self.move_z(-5)
             self.move_a(-(self.pick_volume+90))
             self.move_a(90)
             self.move_z(self.z_traverse_height)
@@ -472,8 +481,9 @@ class PickAndPlateCycleHandler(QtCore.QThread):
         self.set_cycle_run_flags_and_variables()
         self.run_hardware_init()
         self.set_lights(1000)
-        self.move_z(25)
+        self.move_z(self.z_traverse_height)
 
+        self.cycle_run_image_request_signal.emit()
         self.data_received = False
 
     def run_cycle_end(self):
@@ -482,7 +492,6 @@ class PickAndPlateCycleHandler(QtCore.QThread):
         self.move_z(25)
 
         self.move_x_y(self.waste_x, self.waste_y)
-        self.move_z(-5)
         self.move_a(-100)
         self.move_a(100)
         self.move_z(25)
