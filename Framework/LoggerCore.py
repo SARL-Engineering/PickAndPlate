@@ -60,6 +60,7 @@ class PickAndPlateLogger(QtCore.QObject):
         self.console_output = console_output
 
         # ########## Get the Pick And Plate instance of the logger ##########
+        self.make_logging_paths()
         self.logger = logging.getLogger("PickAndPlate")
         self.logger_file = open(application_log_full_path, 'a')
 
@@ -69,13 +70,16 @@ class PickAndPlateLogger(QtCore.QObject):
         # ########## Place divider in log file to see new program launch ##########
         self.add_startup_log_buffer_text()
 
+    def make_logging_paths(self):
+        if not exists(application_logging_path):
+            makedirs(application_logging_path)
+
     def setup_logger(self):
         self.logger.setLevel(logging.DEBUG)
 
         formatter = logging.Formatter(fmt='%(levelname)s : %(asctime)s :  %(message)s', datefmt='%m/%d/%y %H:%M:%S')
 
-        if not exists(application_logging_path):
-            makedirs(application_logging_path)
+        self.make_logging_paths()
 
         file_handler = logging.FileHandler(filename=application_log_full_path)
         file_handler.setFormatter(formatter)

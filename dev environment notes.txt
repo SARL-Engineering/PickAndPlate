@@ -1,0 +1,8 @@
+SSH Message to remove is /etc/issue.net (remove to kill message)
+Python needs to be version 2.7.9
+Opencv needs to be version 2.4.10
+
+
+Autostart
+crontab -e              **Don't use sudo
+@reboot /path/to/startup/script

@@ -548,13 +548,14 @@ class PickAndPlateController(QtCore.QThread):
 
     ########## Methods for all axes ##########
     def initial_system_homing_request(self):
-        #self.tinyg_dump_settings_signal.emit()
+        # self.tinyg_dump_settings_signal.emit()   # HERE TO DUMP TINYG SETTINGS
         self.light_change_requested(1000)
         self.z_home_request(ROUGH)
         self.x_y_move_relative_request(-5, -10)
+        self.x_y_home_request()
         self.a_axis_home_request()
         self.a_axis_move_request(100)
-        self.x_y_home_request()
+
 
     def on_initial_system_homing_requested_slot(self):
         self.command_queue.append({'Command':'Initial Homing'})
@@ -567,7 +568,7 @@ class PickAndPlateController(QtCore.QThread):
 
         self.light_change_requested(1000)
         self.x_y_move_request(precision_z_x_center, precision_z_y_center)
-        self.z_axis_move_request(-25)
+        self.z_axis_move_request(-20)
         self.z_home_request(FINE)
         self.x_y_axis_precision_home_request()
         self.msleep(3500)

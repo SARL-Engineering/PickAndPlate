@@ -62,6 +62,14 @@ RED = (255, 0, 0)
 GREEN = (0, 255, 0)
 
 #####################################
+# Miscellaneous Notes
+#####################################
+# The beaglebone black is very very picky about what USB hubs it's okay with working with. Also, whether or not they
+# are self powered makes a difference as well. The hub at the link below I've tested to be working with external power.
+# Belkin AC Powered Ultra-Slim Series 4-Port USB 2.0 Hub (F4U040v)
+# http://www.amazon.com/gp/product/B005A0B3FG?psc=1&redirect=true&ref_=oh_aui_search_detailpage
+
+#####################################
 # FrameGrabber Class
 #####################################
 class FrameGrabber(QtCore.QThread):
@@ -348,13 +356,12 @@ class PickAndPlateVideo(QtCore.QThread):
             self.setup_blob_params()
             self.setup_params_once = False
 
-
         if  not self.wait_for_image_req:
             self.wait_for_image_req = True
 
             try:
                 frame = cv2.cvtColor(self.raw_frame, cv2.COLOR_BGR2GRAY)  # convert color image to grey
-                #return_val, frame = cv2.threshold(frame, self.min_thresh, 255, cv2.cv.CV_THRESH_BINARY)  # apply binary threshold to image
+                # return_val, frame = cv2.threshold(frame, self.min_thresh, 255, cv2.cv.CV_THRESH_BINARY)  # apply binary threshold to image
                 mask_frame = numpy.zeros((self.y_res, self.x_res), numpy.uint8)  # Setup a masking frame the size of the input frame with zeros
                 cv2.circle(mask_frame, (self.x_center, self.y_center), (self.crop_dim_half - self.usable_offset), 255, -1)  # Fill the mask with 1's for a circle where the dish is in the image
                 frame = cv2.bitwise_and(frame, mask_frame)  # Apply the mask to the input frame
@@ -371,8 +378,6 @@ class PickAndPlateVideo(QtCore.QThread):
 
             except:
                 self.logger.debug("failed to convert")
-
-
 
     def masked_detect_and_overlay(self, input_frame, overlay_frame, overlay_type):
         detector = cv2.SimpleBlobDetector(self.current_params)

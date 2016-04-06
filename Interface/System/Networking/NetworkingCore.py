@@ -101,6 +101,7 @@ class Networking(QtCore.QThread):
 
     def network_update(self):
         try:
+
             eth0_info = netifaces.ifaddresses("eth0")[netifaces.AF_INET][0]
             ip_address = eth0_info['addr']
             netmask = eth0_info['netmask']
