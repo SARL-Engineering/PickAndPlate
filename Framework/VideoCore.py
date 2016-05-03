@@ -399,7 +399,9 @@ class PickAndPlateVideo(QtCore.QThread):
         else:
             output_frame = cv2.drawKeypoints(overlay_frame, self.keypoints, color=(255, 0, 0))
 
-        self.number_embryos_detected_signal.emit(len(self.pickable_embryos))
+        if self.pickable_embryos:
+            self.number_embryos_detected_signal.emit(len(self.pickable_embryos))
+
         return output_frame
 
     def setup_blob_params(self):
@@ -545,7 +547,7 @@ class PickAndPlateVideo(QtCore.QThread):
         return cropped
 
     def get_camera_frame(self):
-        #self.raw_frame = cv2.imread('images/embryo_image.png', cv2.IMREAD_COLOR)
+        #self.raw_frame = cv2.imread('images/test_image.png', cv2.IMREAD_COLOR)
         return_val, self.raw_frame = self.video_camera.retrieve()
         if self.take_image:
             if self.image_count >= 12:

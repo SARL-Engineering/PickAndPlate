@@ -10,7 +10,11 @@ export DISPLAY=:0
 feh --bg-scale /home/debian/PickAndPlate_Extras/pnp-background.png
 
 # Short sleep so you can see the background
-sleep 3
+sleep 1.5
 
-# Start the main pick and plate application
-/usr/bin/python /home/debian/PickAndPlate/PickAndPlate.py &
+# Start the main pick and plate application (move to directory)
+if [ ! -f /home/debian/PickAndPlate/noautostart ]
+then
+    cd /home/debian/PickAndPlate/
+    /usr/bin/python /home/debian/PickAndPlate/PickAndPlate.py &
+fi

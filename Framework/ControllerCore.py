@@ -252,13 +252,12 @@ class SerialHandler(QtCore.QThread):
 
     def reset_tinyg(self):
         self.serial_out_queue.append("^x\n")
-
-        # self.serial_out_queue.append(self.convert_to_json({'xvm':12500}))
-        # self.serial_out_queue.append(self.convert_to_json({'yvm':10000}))
-        # self.serial_out_queue.append(self.convert_to_json({'zvm':5000}))
-        # self.serial_out_queue.append(self.convert_to_json({'zzb':6.5}))
-        # self.serial_out_queue.append(self.convert_to_json({'ajm':1000}))
-        # self.serial_out_queue.append(self.convert_to_json({'xjm':2000}))
+        # self.serial_out_queue.append(self.convert_to_json({'ex':0}))
+        # self.serial_out_queue.append(self.convert_to_json({'ja':100000}))
+        # self.serial_out_queue.append(self.convert_to_json({'mt':90}))
+        # self.serial_out_queue.append(self.convert_to_json({'1pm':1}))
+        # self.serial_out_queue.append(self.convert_to_json({'xfr':10000}))
+        # self.serial_out_queue.append(self.convert_to_json({'xvm':10000}))
         # self.serial_out_queue.append(self.convert_to_json({'yjm':2000}))
         # self.serial_out_queue.append(self.convert_to_json({'afr':8000}))
         # self.serial_out_queue.append(self.convert_to_json({'avm':8000}))
@@ -298,6 +297,8 @@ class SerialHandler(QtCore.QThread):
             self.serial_out_queue.append(self.convert_to_json({'zsx':1}))
             self.msleep(30)  # Required for config changes
             self.serial_out_queue.append(self.convert_to_json({'gc': 'G28.2 Z0'}))
+            self.msleep(30)  # Required for config changes
+            self.serial_out_queue.append(self.convert_to_json({'gc': 'G90 G1 Z5'}))
         elif precision == FINE:
             self.serial_out_queue.append(self.convert_to_json({'zsv':100}))
             self.msleep(30)
@@ -548,7 +549,7 @@ class PickAndPlateController(QtCore.QThread):
 
     ########## Methods for all axes ##########
     def initial_system_homing_request(self):
-        # self.tinyg_dump_settings_signal.emit()   # HERE TO DUMP TINYG SETTINGS
+        #self.tinyg_dump_settings_signal.emit()   # HERE TO DUMP TINYG SETTINGS
         self.light_change_requested(1000)
         self.z_home_request(ROUGH)
         self.x_y_move_relative_request(-5, -10)

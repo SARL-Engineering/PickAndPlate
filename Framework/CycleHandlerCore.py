@@ -324,7 +324,7 @@ class PickAndPlateCycleHandler(QtCore.QThread):
             self.button_state = BUTTON_WAIT
             while self.button_state == BUTTON_WAIT:
                 if run_once:
-                    self.move_z(25)
+                    self.move_z(self.z_traverse_height)
                     self.move_x_y(0,0)
                     self.no_embryos_msg_box_show_signal.emit()
                     run_once = False
@@ -489,12 +489,12 @@ class PickAndPlateCycleHandler(QtCore.QThread):
     def run_cycle_end(self):
         self.cycle_run_state_change_signal.emit(False, self.settings.value("quick_settings/embryo_type").toString())
         self.stop_time = time.time()
-        self.move_z(25)
+        self.move_z(self.z_traverse_height)
 
         self.move_x_y(self.waste_x, self.waste_y)
         self.move_a(-100)
         self.move_a(100)
-        self.move_z(25)
+        self.move_z(self.z_traverse_height)
 
         self.move_x_y(0,0)
         self.set_lights(0)
