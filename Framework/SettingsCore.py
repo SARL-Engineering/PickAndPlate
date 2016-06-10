@@ -33,6 +33,7 @@ __status__ = "Development"
 # Python native imports
 from PyQt4 import QtCore
 
+
 # Custom imports
 
 #####################################
@@ -159,18 +160,22 @@ class PickAndPlateSettings(QtCore.QObject):
                                self.settings.value("system/detection_calibration/blob_area_max", 40).toDouble()[0])
 
         self.settings.setValue("system/detection_calibration/blob_circularity_enabled",
-                               self.settings.value("system/detection_calibration/blob_circularity_enabled", 1).toInt()[0])
+                               self.settings.value("system/detection_calibration/blob_circularity_enabled", 1).toInt()[
+                                   0])
         self.settings.setValue("system/detection_calibration/blob_circularity_min",
-                               self.settings.value("system/detection_calibration/blob_circularity_min", 15).toDouble()[0])
+                               self.settings.value("system/detection_calibration/blob_circularity_min", 15).toDouble()[
+                                   0])
         self.settings.setValue("system/detection_calibration/blob_circularity_max",
-                               self.settings.value("system/detection_calibration/blob_circularity_max", 150).toDouble()[0])
+                               self.settings.value("system/detection_calibration/blob_circularity_max", 150).toDouble()[
+                                   0])
 
         self.settings.setValue("system/detection_calibration/blob_convexity_enabled",
                                self.settings.value("system/detection_calibration/blob_convexity_enabled", 1).toInt()[0])
         self.settings.setValue("system/detection_calibration/blob_convexity_min",
                                self.settings.value("system/detection_calibration/blob_convexity_min", 15).toDouble()[0])
         self.settings.setValue("system/detection_calibration/blob_convexity_max",
-                               self.settings.value("system/detection_calibration/blob_convexity_max", 150).toDouble()[0])
+                               self.settings.value("system/detection_calibration/blob_convexity_max", 150).toDouble()[
+                                   0])
 
         self.settings.setValue("system/detection_calibration/blob_inertia_enabled",
                                self.settings.value("system/detection_calibration/blob_inertia_enabled", 1).toInt()[0])

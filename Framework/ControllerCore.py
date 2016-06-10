@@ -522,7 +522,7 @@ class PickAndPlateController(QtCore.QThread):
         self.serial_handler.wait()
         self.logger.debug("PickAndPlate Controller Thread Exiting...")
 
-    ########## Methods for general commands / light control ##########
+    # ######### Methods for general commands / light control ##########
     def on_light_change_request_signal_slot(self, brightness):
         self.command_queue.append({'Command':'Light Change', 'Brightness':brightness})
 
@@ -547,7 +547,7 @@ class PickAndPlateController(QtCore.QThread):
 
         self.controller_command_complete_signal.emit()
 
-    ########## Methods for all axes ##########
+    # ######### Methods for all axes ##########
     def initial_system_homing_request(self):
         #self.tinyg_dump_settings_signal.emit()   # HERE TO DUMP TINYG SETTINGS
         self.light_change_requested(1000)

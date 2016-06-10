@@ -69,6 +69,7 @@ GREEN = (0, 255, 0)
 # Belkin AC Powered Ultra-Slim Series 4-Port USB 2.0 Hub (F4U040v)
 # http://www.amazon.com/gp/product/B005A0B3FG?psc=1&redirect=true&ref_=oh_aui_search_detailpage
 
+
 #####################################
 # FrameGrabber Class
 #####################################
@@ -187,7 +188,7 @@ class PickAndPlateVideo(QtCore.QThread):
         self.crop_dim_half = 0
         self.usable_offset = 0
 
-        self.take_image = False
+        self.take_image = True
         self.image_count = 0
 
         # ########## Make signal/slot connections ##########
@@ -549,6 +550,7 @@ class PickAndPlateVideo(QtCore.QThread):
     def get_camera_frame(self):
         #self.raw_frame = cv2.imread('images/test_image.png', cv2.IMREAD_COLOR)
         return_val, self.raw_frame = self.video_camera.retrieve()
+
         if self.take_image:
             if self.image_count >= 12:
                 filename = datetime.now().strftime("RawImage__%Y-%m-%d___%H-%M-%S.png")

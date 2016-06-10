@@ -238,17 +238,9 @@ class PickAndPlateCycleHandler(QtCore.QThread):
             self.cycle_run_image_request_signal.emit()
             self.set_motors(True)
             self.msleep(100)
-        #FIXME: NEED TO CHANGE WHAT ITS USING TO FIND EMBRYOS
-        # embryo_x_px = 0
-        # embryo_y_px = 0
-        #
-        # for point in self.current_frame_keypoints:
-        #     if (not isnan(point.pt[0])) and (not isnan(point.pt[1])):
-        #         embryo_x_px = point.pt[0]
-        #         embryo_y_px = point.pt[1]
-        #         break
 
         if self.current_frame_pickable:
+            # FIXME: Change embryo choice to be from center of dish outwards. This requires sorting.
             rand_embryo = randint(0, len(self.current_frame_pickable)-1)
             embryo_x_px = self.current_frame_pickable[rand_embryo][X_VAL]
             embryo_y_px = self.current_frame_pickable[rand_embryo][Y_VAL]
@@ -264,10 +256,10 @@ class PickAndPlateCycleHandler(QtCore.QThread):
             self.pick_positions_ready_signal.emit(embryo_x, embryo_y)
             self.make_current_and_last_pick_images(embryo_x_px, embryo_y_px)
 
-
+            # Get heights off bottom of dish and plate for tip placement
             pick_height_actual = self.pick_height + self.dish_min
             place_depth_actual = self.place_height + self.plate_min
-
+            place_depth_reclaim = 5 + self.plate_min
 
             # Move up and over to found embryo co-ordinates
             self.move_z(self.z_traverse_height)
@@ -286,22 +278,46 @@ class PickAndPlateCycleHandler(QtCore.QThread):
             self.move_z_fixed_feedrate(self.z_traverse_height, self.z_vel)
             self.move_x_y_timed(self.cur_plate_x, self.cur_plate_y, x_y_time_needed)
             self.move_z_fixed_feedrate(place_depth_actual, self.z_vel)
-            self.msleep(self.placement_dwell)
 
-            # Move pick head back up and to the waste container
-            self.move_z(self.z_traverse_height)
-            self.move_x_y(self.waste_x, self.waste_y)
+            # For chorionated embryos, I need to disperse at least 15uL of liquid into the plate
+            # I also need to account for this in my waste cycle otherwise things will break
+            if self.run_embryo_type == "Dechorionated":
+                self.msleep(self.placement_dwell)
 
-            # Now that we're at the waste container, start looking for a new image
-            self.cycle_run_image_request_signal.emit()
-            self.data_received = False
+                # Move pick head back up and to the waste container
+                self.move_z(self.z_traverse_height)
+                self.move_x_y(self.waste_x, self.waste_y)
 
-            # Move down in waste and dispel any extra fluid
-            # self.move_z(-5)
-            self.move_a(-(self.pick_volume+90))
+                # Now that we're at the waste container, start looking for a new image
+                self.cycle_run_image_request_signal.emit()
+                self.data_received = False
+
+                # Move down in waste and dispel any extra fluid
+                # self.move_z(-5)
+                self.move_a(-(self.pick_volume + 90))
+            else:
+                # FIXME : Replace break)_things var with QSettings var
+                break_things = 15
+
+                self.move_a(-break_things)
+                self.msleep(self.placement_dwell)
+
+                # Move pick head back up and to the waste container
+                self.move_z(self.z_traverse_height)
+                self.move_x_y(self.waste_x, self.waste_y)
+
+                # Now that we're at the waste container, start looking for a new image
+                self.cycle_run_image_request_signal.emit()
+                self.data_received = False
+
+                # Move down in waste and dispel any extra fluid
+                # self.move_z(-5)
+                self.move_a(-(self.pick_volume-break_things+90))
+
             self.move_a(90)
             self.move_z(self.z_traverse_height)
 
+            # FIXME: Change this so it properly handles row/col sorting.
             # Increment well
             if (self.cur_plate_y + 9) > (self.a1_y + (11*9)):
                 self.cur_plate_x += 9
@@ -317,7 +333,7 @@ class PickAndPlateCycleHandler(QtCore.QThread):
             self.data_received = False
             self.msleep(200)
 
-    ########## Handling for no more embryos ###########
+    # ######### Handling for no more embryos ###########
     def check_if_no_embryos(self):
         run_once = True
         if self.no_embryo_count > (NO_EMBRYO_THRESHOLD - 1):
@@ -539,7 +555,7 @@ class PickAndPlateCycleHandler(QtCore.QThread):
 
         self.plate_min = self.settings.value("system/system_calibration/plate_z_min").toDouble()[0]
         self.dish_min = self.settings.value("system/system_calibration/dish_z_min").toDouble()[0]
-        #FIXME: CHECK IF PRECISION IS LOST HERE.......
+
         self.cur_plate_x = self.a1_x
         self.cur_plate_y = self.a1_y
 
