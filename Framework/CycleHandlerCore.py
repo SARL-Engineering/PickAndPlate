@@ -127,6 +127,7 @@ class PickAndPlateCycleHandler(QtCore.QThread):
         self.pick_height = 0
         self.place_height = 0
         self.pick_volume = 0
+        self.place_volume = 0
         self.plate_min = 0
         self.dish_min = 0
 
@@ -296,10 +297,8 @@ class PickAndPlateCycleHandler(QtCore.QThread):
                 # self.move_z(-5)
                 self.move_a(-(self.pick_volume + 90))
             else:
-                # FIXME : Replace break)_things var with QSettings var
-                break_things = 15
 
-                self.move_a(-break_things)
+                self.move_a(-self.place_volume)
                 self.msleep(self.placement_dwell)
 
                 # Move pick head back up and to the waste container
@@ -312,7 +311,7 @@ class PickAndPlateCycleHandler(QtCore.QThread):
 
                 # Move down in waste and dispel any extra fluid
                 # self.move_z(-5)
-                self.move_a(-(self.pick_volume-break_things+90))
+                self.move_a(-(self.pick_volume-self.place_volume+90))
 
             self.move_a(90)
             self.move_z(self.z_traverse_height)
@@ -572,7 +571,7 @@ class PickAndPlateCycleHandler(QtCore.QThread):
         self.pick_height = self.settings.value("system/plating_calibration/" + prefix + "pick_height").toDouble()[0]
         self.place_height = self.settings.value("system/plating_calibration/" + prefix + "place_height").toDouble()[0]
         self.pick_volume = self.settings.value("system/plating_calibration/" + prefix + "pick_volume").toDouble()[0]
-
+        self.place_volume = self.settings.value("system/plating_calibration/" + prefix + "place_volume").toDouble()[0]
 
     def on_video_requested_image_ready_slot(self):
         self.cropped_only_raw = self.main_window.video.cropped_only_raw

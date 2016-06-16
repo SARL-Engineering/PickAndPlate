@@ -73,6 +73,7 @@ class PlatingCalibration(QtCore.QObject):
         self.c_place_height_sb = self.main_window.chorionated_place_height_spin_box
         self.c_pick_tube_diameter_sb = self.main_window.chorionated_pick_tube_diameter_spin_box
         self.c_pick_volume_sb = self.main_window.chorionated_pick_volume_spin_box
+        self.c_place_volume_sb = self.main_window.chorionated_place_volume_spin_box
         self.c_z_vel_sb = self.main_window.chorionated_z_velocity_spin_box
         self.c_fall_time_sb = self.main_window.chorionated_embryo_fall_time_spin_box
         self.c_p_dwell_sb = self.main_window.chorionated_placement_dwell_spin_box
@@ -99,6 +100,7 @@ class PlatingCalibration(QtCore.QObject):
         self.c_place_height_sb.valueChanged.connect(self.save_changed_values_to_settings_slot)
         self.c_pick_tube_diameter_sb.valueChanged.connect(self.save_changed_values_to_settings_slot)
         self.c_pick_volume_sb.valueChanged.connect(self.save_changed_values_to_settings_slot)
+        self.c_place_volume_sb.valueChanged.connect(self.save_changed_values_to_settings_slot)
         self.c_z_vel_sb.valueChanged.connect(self.save_changed_values_to_settings_slot)
         self.c_fall_time_sb.valueChanged.connect(self.save_changed_values_to_settings_slot)
         self.c_p_dwell_sb.valueChanged.connect(self.save_changed_values_to_settings_slot)
@@ -116,6 +118,11 @@ class PlatingCalibration(QtCore.QObject):
         self.settings.setValue("system/plating_calibration/c_place_height", self.c_place_height_sb.value())
         self.settings.setValue("system/plating_calibration/c_tube_diameter", self.c_pick_tube_diameter_sb.value())
         self.settings.setValue("system/plating_calibration/c_pick_volume", self.c_pick_volume_sb.value())
+
+        self.c_place_volume_sb.setValue(min(self.c_place_volume_sb.value(), self.c_pick_volume_sb.value()))
+
+        self.settings.setValue("system/plating_calibration/c_place_volume", self.c_place_volume_sb.value())
+
         self.settings.setValue("system/plating_calibration/c_z_velocity", self.c_z_vel_sb.value())
         self.settings.setValue("system/plating_calibration/c_embryo_fall_time", self.c_fall_time_sb.value())
         self.settings.setValue("system/plating_calibration/c_placement_dwell", self.c_p_dwell_sb.value())
@@ -133,6 +140,7 @@ class PlatingCalibration(QtCore.QObject):
         self.c_place_height_sb.setValue(self.settings.value("system/plating_calibration/c_place_height").toDouble()[0])
         self.c_pick_tube_diameter_sb.setValue(self.settings.value("system/plating_calibration/c_tube_diameter").toDouble()[0])
         self.c_pick_volume_sb.setValue(self.settings.value("system/plating_calibration/c_pick_volume").toDouble()[0])
+        self.c_place_volume_sb.setValue(self.settings.value("system/plating_calibration/c_place_volume").toDouble()[0])
         self.c_z_vel_sb.setValue(self.settings.value("system/plating_calibration/c_z_velocity").toDouble()[0])
         self.c_fall_time_sb.setValue(self.settings.value("system/plating_calibration/c_embryo_fall_time").toDouble()[0])
         self.c_p_dwell_sb.setValue(self.settings.value("system/plating_calibration/c_placement_dwell").toDouble()[0])

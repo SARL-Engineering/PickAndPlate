@@ -1574,7 +1574,7 @@ QTabBar::tab:last{
 }</string>
           </property>
           <property name="currentIndex">
-           <number>2</number>
+           <number>0</number>
           </property>
           <widget class="QWidget" name="tab_6">
            <attribute name="title">
@@ -1990,8 +1990,8 @@ p, li { white-space: pre-wrap; }
                   <rect>
                    <x>0</x>
                    <y>0</y>
-                   <width>620</width>
-                   <height>175</height>
+                   <width>736</width>
+                   <height>258</height>
                   </rect>
                  </property>
                  <attribute name="label">
@@ -2000,6 +2000,129 @@ p, li { white-space: pre-wrap; }
                  <layout class="QVBoxLayout" name="verticalLayout_14">
                   <item>
                    <layout class="QGridLayout" name="gridLayout_33">
+                    <item row="2" column="0">
+                     <layout class="QHBoxLayout" name="horizontalLayout_21">
+                      <item>
+                       <widget class="QLabel" name="label_71">
+                        <property name="text">
+                         <string>Z Velocity (mm/min)</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item>
+                       <widget class="QDoubleSpinBox" name="chorionated_z_velocity_spin_box">
+                        <property name="styleSheet">
+                         <string notr="true">background-color:rgb(55,55,55)</string>
+                        </property>
+                        <property name="decimals">
+                         <number>0</number>
+                        </property>
+                        <property name="minimum">
+                         <double>100.000000000000000</double>
+                        </property>
+                        <property name="maximum">
+                         <double>20000.000000000000000</double>
+                        </property>
+                        <property name="singleStep">
+                         <double>50.000000000000000</double>
+                        </property>
+                       </widget>
+                      </item>
+                      <item>
+                       <spacer name="horizontalSpacer_74">
+                        <property name="orientation">
+                         <enum>Qt::Horizontal</enum>
+                        </property>
+                        <property name="sizeHint" stdset="0">
+                         <size>
+                          <width>40</width>
+                          <height>20</height>
+                         </size>
+                        </property>
+                       </spacer>
+                      </item>
+                     </layout>
+                    </item>
+                    <item row="0" column="0">
+                     <layout class="QHBoxLayout" name="horizontalLayout_48">
+                      <item>
+                       <widget class="QLabel" name="label_69">
+                        <property name="text">
+                         <string>Pick Height (mm)</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item>
+                       <widget class="QDoubleSpinBox" name="chorionated_pick_height_spin_box">
+                        <property name="styleSheet">
+                         <string notr="true">background-color:rgb(55,55,55)</string>
+                        </property>
+                        <property name="minimum">
+                         <double>0.100000000000000</double>
+                        </property>
+                        <property name="maximum">
+                         <double>10.000000000000000</double>
+                        </property>
+                        <property name="singleStep">
+                         <double>0.010000000000000</double>
+                        </property>
+                       </widget>
+                      </item>
+                      <item>
+                       <spacer name="horizontalSpacer_72">
+                        <property name="orientation">
+                         <enum>Qt::Horizontal</enum>
+                        </property>
+                        <property name="sizeHint" stdset="0">
+                         <size>
+                          <width>40</width>
+                          <height>20</height>
+                         </size>
+                        </property>
+                       </spacer>
+                      </item>
+                     </layout>
+                    </item>
+                    <item row="1" column="2">
+                     <layout class="QHBoxLayout" name="horizontalLayout_50">
+                      <item>
+                       <spacer name="horizontalSpacer_73">
+                        <property name="orientation">
+                         <enum>Qt::Horizontal</enum>
+                        </property>
+                        <property name="sizeHint" stdset="0">
+                         <size>
+                          <width>40</width>
+                          <height>20</height>
+                         </size>
+                        </property>
+                       </spacer>
+                      </item>
+                      <item>
+                       <widget class="QLabel" name="label_73">
+                        <property name="text">
+                         <string>Place Volume ( μL)</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item>
+                       <widget class="QDoubleSpinBox" name="chorionated_place_volume_spin_box">
+                        <property name="styleSheet">
+                         <string notr="true">background-color:rgb(55,55,55)</string>
+                        </property>
+                        <property name="decimals">
+                         <number>1</number>
+                        </property>
+                        <property name="maximum">
+                         <double>100.000000000000000</double>
+                        </property>
+                        <property name="singleStep">
+                         <double>0.100000000000000</double>
+                        </property>
+                       </widget>
+                      </item>
+                     </layout>
+                    </item>
                     <item row="1" column="0">
                      <layout class="QHBoxLayout" name="horizontalLayout_25">
                       <item>
@@ -2077,129 +2200,6 @@ p, li { white-space: pre-wrap; }
                       </item>
                      </layout>
                     </item>
-                    <item row="0" column="0">
-                     <layout class="QHBoxLayout" name="horizontalLayout_48">
-                      <item>
-                       <widget class="QLabel" name="label_69">
-                        <property name="text">
-                         <string>Pick Height (mm)</string>
-                        </property>
-                       </widget>
-                      </item>
-                      <item>
-                       <widget class="QDoubleSpinBox" name="chorionated_pick_height_spin_box">
-                        <property name="styleSheet">
-                         <string notr="true">background-color:rgb(55,55,55)</string>
-                        </property>
-                        <property name="minimum">
-                         <double>0.100000000000000</double>
-                        </property>
-                        <property name="maximum">
-                         <double>10.000000000000000</double>
-                        </property>
-                        <property name="singleStep">
-                         <double>0.010000000000000</double>
-                        </property>
-                       </widget>
-                      </item>
-                      <item>
-                       <spacer name="horizontalSpacer_72">
-                        <property name="orientation">
-                         <enum>Qt::Horizontal</enum>
-                        </property>
-                        <property name="sizeHint" stdset="0">
-                         <size>
-                          <width>40</width>
-                          <height>20</height>
-                         </size>
-                        </property>
-                       </spacer>
-                      </item>
-                     </layout>
-                    </item>
-                    <item row="1" column="2">
-                     <layout class="QHBoxLayout" name="horizontalLayout_50">
-                      <item>
-                       <spacer name="horizontalSpacer_73">
-                        <property name="orientation">
-                         <enum>Qt::Horizontal</enum>
-                        </property>
-                        <property name="sizeHint" stdset="0">
-                         <size>
-                          <width>40</width>
-                          <height>20</height>
-                         </size>
-                        </property>
-                       </spacer>
-                      </item>
-                      <item>
-                       <widget class="QLabel" name="label_70">
-                        <property name="text">
-                         <string>Pick Volume ( μL)</string>
-                        </property>
-                       </widget>
-                      </item>
-                      <item>
-                       <widget class="QDoubleSpinBox" name="chorionated_pick_volume_spin_box">
-                        <property name="styleSheet">
-                         <string notr="true">background-color:rgb(55,55,55)</string>
-                        </property>
-                        <property name="decimals">
-                         <number>1</number>
-                        </property>
-                        <property name="maximum">
-                         <double>100.000000000000000</double>
-                        </property>
-                        <property name="singleStep">
-                         <double>0.100000000000000</double>
-                        </property>
-                       </widget>
-                      </item>
-                     </layout>
-                    </item>
-                    <item row="2" column="0">
-                     <layout class="QHBoxLayout" name="horizontalLayout_21">
-                      <item>
-                       <widget class="QLabel" name="label_71">
-                        <property name="text">
-                         <string>Z Velocity (mm/min)</string>
-                        </property>
-                       </widget>
-                      </item>
-                      <item>
-                       <widget class="QDoubleSpinBox" name="chorionated_z_velocity_spin_box">
-                        <property name="styleSheet">
-                         <string notr="true">background-color:rgb(55,55,55)</string>
-                        </property>
-                        <property name="decimals">
-                         <number>0</number>
-                        </property>
-                        <property name="minimum">
-                         <double>100.000000000000000</double>
-                        </property>
-                        <property name="maximum">
-                         <double>20000.000000000000000</double>
-                        </property>
-                        <property name="singleStep">
-                         <double>50.000000000000000</double>
-                        </property>
-                       </widget>
-                      </item>
-                      <item>
-                       <spacer name="horizontalSpacer_74">
-                        <property name="orientation">
-                         <enum>Qt::Horizontal</enum>
-                        </property>
-                        <property name="sizeHint" stdset="0">
-                         <size>
-                          <width>40</width>
-                          <height>20</height>
-                         </size>
-                        </property>
-                       </spacer>
-                      </item>
-                     </layout>
-                    </item>
                     <item row="2" column="2">
                      <layout class="QHBoxLayout" name="horizontalLayout_22">
                       <item>
@@ -2242,19 +2242,6 @@ p, li { white-space: pre-wrap; }
                        </widget>
                       </item>
                      </layout>
-                    </item>
-                    <item row="1" column="1">
-                     <spacer name="horizontalSpacer_44">
-                      <property name="orientation">
-                       <enum>Qt::Horizontal</enum>
-                      </property>
-                      <property name="sizeHint" stdset="0">
-                       <size>
-                        <width>40</width>
-                        <height>20</height>
-                       </size>
-                      </property>
-                     </spacer>
                     </item>
                     <item row="2" column="1">
                      <layout class="QHBoxLayout" name="horizontalLayout_16">
@@ -2302,6 +2289,59 @@ p, li { white-space: pre-wrap; }
                       </item>
                       <item>
                        <spacer name="horizontalSpacer_95">
+                        <property name="orientation">
+                         <enum>Qt::Horizontal</enum>
+                        </property>
+                        <property name="sizeHint" stdset="0">
+                         <size>
+                          <width>40</width>
+                          <height>20</height>
+                         </size>
+                        </property>
+                       </spacer>
+                      </item>
+                     </layout>
+                    </item>
+                    <item row="1" column="1">
+                     <layout class="QHBoxLayout" name="horizontalLayout_17">
+                      <item>
+                       <spacer name="horizontalSpacer_6">
+                        <property name="orientation">
+                         <enum>Qt::Horizontal</enum>
+                        </property>
+                        <property name="sizeHint" stdset="0">
+                         <size>
+                          <width>40</width>
+                          <height>20</height>
+                         </size>
+                        </property>
+                       </spacer>
+                      </item>
+                      <item>
+                       <widget class="QLabel" name="label_70">
+                        <property name="text">
+                         <string>Pick Volume ( μL)</string>
+                        </property>
+                       </widget>
+                      </item>
+                      <item>
+                       <widget class="QDoubleSpinBox" name="chorionated_pick_volume_spin_box">
+                        <property name="styleSheet">
+                         <string notr="true">background-color:rgb(55,55,55)</string>
+                        </property>
+                        <property name="decimals">
+                         <number>1</number>
+                        </property>
+                        <property name="maximum">
+                         <double>100.000000000000000</double>
+                        </property>
+                        <property name="singleStep">
+                         <double>0.100000000000000</double>
+                        </property>
+                       </widget>
+                      </item>
+                      <item>
+                       <spacer name="horizontalSpacer_33">
                         <property name="orientation">
                          <enum>Qt::Horizontal</enum>
                         </property>

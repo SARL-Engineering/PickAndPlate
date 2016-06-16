@@ -557,7 +557,6 @@ class PickAndPlateController(QtCore.QThread):
         self.a_axis_home_request()
         self.a_axis_move_request(100)
 
-
     def on_initial_system_homing_requested_slot(self):
         self.command_queue.append({'Command':'Initial Homing'})
 
