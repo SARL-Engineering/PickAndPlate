@@ -56,6 +56,8 @@ X_VAL = 0
 Y_VAL = 1
 SIZE_VAL = 2
 
+CAL_PIPETTE_DIAMETER = 1.98  # Diameter in mm for the calibration pipette
+
 
 #####################################
 # PickAndPlateController Definition
@@ -135,6 +137,8 @@ class PickAndPlateCycleHandler(QtCore.QThread):
         self.placement_dwell = 0
         self.z_traverse_height = 20
         self.z_vel = 0
+
+        self.pipette_diameter = 0
 
         self.cropped_only_raw = None
         self.cycle_monitor_qimage = None
@@ -316,21 +320,35 @@ class PickAndPlateCycleHandler(QtCore.QThread):
             self.move_a(90)
             self.move_z(self.z_traverse_height)
 
-            # FIXME: Change this so it properly handles row/col sorting.
-            # Increment well
-            if (self.cur_plate_y + 9) > (self.a1_y + (11*9)):
-                self.cur_plate_x += 9
-                self.cur_plate_y = self.a1_y
-            else:
-                self.cur_plate_y += 9
-
-            if self.cur_plate_x > (self.a1_x + (7*9)):
-                self.cycle_end_flag = True
+            self.advance_plate_well()
 
         else:
             self.no_embryo_count += 1
             self.data_received = False
             self.msleep(200)
+
+    def advance_plate_well(self):
+        plating_order = self.settings.value("quick_settings/plating_order").toString()
+
+        if plating_order == "Rows":
+            if (self.cur_plate_y + 9) > (self.a1_y + (11 * 9)):
+                self.cur_plate_x += 9
+                self.cur_plate_y = self.a1_y
+            else:
+                self.cur_plate_y += 9
+
+            if self.cur_plate_x > (self.a1_x + (7 * 9)):
+                self.cycle_end_flag = True
+
+        elif plating_order == "Cols":
+            if (self.cur_plate_x + 9) > (self.a1_x + (7 * 9)):
+                self.cur_plate_y += 9
+                self.cur_plate_x = self.a1_x
+            else:
+                self.cur_plate_x += 9
+
+            if self.cur_plate_y > (self.a1_y + (11 * 9)):
+                self.cycle_end_flag = True
 
     # ######### Handling for no more embryos ###########
     def check_if_no_embryos(self):
@@ -539,12 +557,31 @@ class PickAndPlateCycleHandler(QtCore.QThread):
         self.start_time = time.time()
 
         # Cal Vars
-        self.dish_x = self.settings.value("system/system_calibration/dish_x_center").toFloat()[0]
-        self.dish_y = self.settings.value("system/system_calibration/dish_y_center").toFloat()[0]
-        self.a1_x = self.settings.value("system/system_calibration/a1_x_center").toFloat()[0]
-        self.a1_y = self.settings.value("system/system_calibration/a1_y_center").toFloat()[0]
-        self.waste_x = self.settings.value("system/system_calibration/waste_x_center").toFloat()[0]
-        self.waste_y = self.settings.value("system/system_calibration/waste_y_center").toFloat()[0]
+        if self.run_embryo_type == "Dechorionated":
+            prefix = "d_"
+        else:
+            prefix = "c_"
+
+        self.z_vel = self.settings.value("system/plating_calibration/" + prefix + "z_velocity").toInt()[0]
+        self.placement_dwell = self.settings.value("system/plating_calibration/" + prefix + "placement_dwell").toInt()[0]
+        self.e_fall_time = self.settings.value("system/plating_calibration/" + prefix + "embryo_fall_time").toDouble()[0]
+        self.pick_height = self.settings.value("system/plating_calibration/" + prefix + "pick_height").toDouble()[0]
+        self.place_height = self.settings.value("system/plating_calibration/" + prefix + "place_height").toDouble()[0]
+        self.pick_volume = self.settings.value("system/plating_calibration/" + prefix + "pick_volume").toDouble()[0]
+        self.place_volume = self.settings.value("system/plating_calibration/" + prefix + "place_volume").toDouble()[0]
+        self.pipette_diameter = self.settings.value("system/plating_calibration/" + prefix + "tube_diameter").toDouble()[0]
+
+        # Offset for pipette size adjustment
+        cal_pipette_radius = CAL_PIPETTE_DIAMETER / 2
+        current_pipette_radius = self.pipette_diameter / 2
+        pipette_adjustment = current_pipette_radius - cal_pipette_radius
+
+        self.dish_x = self.settings.value("system/system_calibration/dish_x_center").toFloat()[0] + pipette_adjustment
+        self.dish_y = self.settings.value("system/system_calibration/dish_y_center").toFloat()[0] + pipette_adjustment
+        self.a1_x = self.settings.value("system/system_calibration/a1_x_center").toFloat()[0] + pipette_adjustment
+        self.a1_y = self.settings.value("system/system_calibration/a1_y_center").toFloat()[0] + pipette_adjustment
+        self.waste_x = self.settings.value("system/system_calibration/waste_x_center").toFloat()[0] + pipette_adjustment
+        self.waste_y = self.settings.value("system/system_calibration/waste_y_center").toFloat()[0] + pipette_adjustment
 
         self.dish_center_px_x = self.settings.value("system/system_calibration/crop_x_center").toInt()[0]
         self.dish_center_px_y = self.settings.value("system/system_calibration/crop_y_center").toInt()[0]
@@ -559,19 +596,6 @@ class PickAndPlateCycleHandler(QtCore.QThread):
         self.cur_plate_y = self.a1_y
 
         self.run_embryo_type = self.settings.value("quick_settings/embryo_type").toString()
-
-        if self.run_embryo_type == "Dechorionated":
-            prefix = "d_"
-        else:
-            prefix = "c_"
-
-        self.z_vel = self.settings.value("system/plating_calibration/" + prefix + "z_velocity").toInt()[0]
-        self.placement_dwell = self.settings.value("system/plating_calibration/" + prefix + "placement_dwell").toInt()[0]
-        self.e_fall_time = self.settings.value("system/plating_calibration/" + prefix + "embryo_fall_time").toDouble()[0]
-        self.pick_height = self.settings.value("system/plating_calibration/" + prefix + "pick_height").toDouble()[0]
-        self.place_height = self.settings.value("system/plating_calibration/" + prefix + "place_height").toDouble()[0]
-        self.pick_volume = self.settings.value("system/plating_calibration/" + prefix + "pick_volume").toDouble()[0]
-        self.place_volume = self.settings.value("system/plating_calibration/" + prefix + "place_volume").toDouble()[0]
 
     def on_video_requested_image_ready_slot(self):
         self.cropped_only_raw = self.main_window.video.cropped_only_raw

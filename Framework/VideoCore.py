@@ -548,7 +548,7 @@ class PickAndPlateVideo(QtCore.QThread):
         return cropped
 
     def get_camera_frame(self):
-        #self.raw_frame = cv2.imread('images/test_image.png', cv2.IMREAD_COLOR)
+        #self.raw_frame = cv2.imread('images/chorionated.png', cv2.IMREAD_COLOR)
         return_val, self.raw_frame = self.video_camera.retrieve()
 
         if self.take_image:
