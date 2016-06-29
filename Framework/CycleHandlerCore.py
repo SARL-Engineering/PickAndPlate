@@ -76,6 +76,9 @@ class PickAndPlateCycleHandler(QtCore.QThread):
     cycle_run_image_request_signal = QtCore.pyqtSignal()
     interface_cycle_stop_signal = QtCore.pyqtSignal()
 
+    wait_for_embryos_msg_box_show_signal = QtCore.pyqtSignal()
+    wait_for_embryos_msg_box_decision_signal = QtCore.pyqtSignal(int)
+
     no_embryos_msg_box_show_signal = QtCore.pyqtSignal()
     no_embryos_msg_decision_signal = QtCore.pyqtSignal(int)
 
@@ -170,10 +173,9 @@ class PickAndPlateCycleHandler(QtCore.QThread):
         self.time_remaining = 0
         self.success_rate = 0
 
-        #Timing variables
+        # Timing variables
         self.start_time = 0
         self.stop_time = 0
-
 
         # ########## Make signal/slot connections ##########
         self.connect_signals_to_slots()
@@ -198,7 +200,7 @@ class PickAndPlateCycleHandler(QtCore.QThread):
         self.main_window.controller.tinyg_location_update_signal.connect(self.on_system_location_changed_slot)
         self.main_window.controller.controller_init_complete_signal.connect(self.on_init_command_completed_slot)
         self.main_window.controller.controller_command_complete_signal.connect(
-                self.on_controller_command_completed_slot)
+            self.on_controller_command_completed_slot)
 
         # VideoCore to CycleHandler
         self.main_window.video.requested_image_ready_signal.connect(self.on_video_requested_image_ready_slot)
@@ -208,6 +210,9 @@ class PickAndPlateCycleHandler(QtCore.QThread):
         self.cycle_run_image_request_signal.connect(self.main_window.video.on_cycle_run_image_requested_slot)
 
         # CycleHandler MessageBox Signals/Slots
+        self.wait_for_embryos_msg_box_show_signal.connect(self.on_wait_for_embryo_placement_slot)
+        self.wait_for_embryos_msg_box_decision_signal.connect(self.on_msg_decision_made_slot)
+
         self.no_embryos_msg_box_show_signal.connect(self.on_no_more_embryos_found_slot)
         self.no_embryos_msg_decision_signal.connect(self.on_msg_decision_made_slot)
 
@@ -246,7 +251,7 @@ class PickAndPlateCycleHandler(QtCore.QThread):
 
         if self.current_frame_pickable:
             # FIXME: Change embryo choice to be from center of dish outwards. This requires sorting.
-            rand_embryo = randint(0, len(self.current_frame_pickable)-1)
+            rand_embryo = randint(0, len(self.current_frame_pickable) - 1)
             embryo_x_px = self.current_frame_pickable[rand_embryo][X_VAL]
             embryo_y_px = self.current_frame_pickable[rand_embryo][Y_VAL]
 
@@ -275,8 +280,8 @@ class PickAndPlateCycleHandler(QtCore.QThread):
             self.move_a(self.pick_volume)
 
             # Calculate timing for movement
-            z_seconds_pick = (abs(pick_height_actual - self.z_traverse_height)/self.z_vel)*60
-            z_seconds_place = (abs(place_depth_actual - self.z_traverse_height)/self.z_vel)*60
+            z_seconds_pick = (abs(pick_height_actual - self.z_traverse_height) / self.z_vel) * 60
+            z_seconds_place = (abs(place_depth_actual - self.z_traverse_height) / self.z_vel) * 60
             x_y_time_needed = self.e_fall_time - z_seconds_pick - z_seconds_place
 
             # Move to the next unused well on the plate, then go down and drop embryo, all with timing
@@ -315,7 +320,7 @@ class PickAndPlateCycleHandler(QtCore.QThread):
 
                 # Move down in waste and dispel any extra fluid
                 # self.move_z(-5)
-                self.move_a(-(self.pick_volume-self.place_volume+90))
+                self.move_a(-(self.pick_volume - self.place_volume + 90))
 
             self.move_a(90)
             self.move_z(self.z_traverse_height)
@@ -326,6 +331,29 @@ class PickAndPlateCycleHandler(QtCore.QThread):
             self.no_embryo_count += 1
             self.data_received = False
             self.msleep(200)
+
+    def on_wait_for_embryo_placement_slot(self):
+        msg = QtGui.QMessageBox()
+        msg.setWindowTitle("Waiting for Embryos")
+        msg.setText("Press \"Continue\" once embryos are placed.")
+        msg.setModal(True)
+        msg.setWindowFlags(QtCore.Qt.WindowStaysOnTopHint)
+
+        # Make and add custom labeled buttons
+        continue_button = msg.addButton("Continue", QtGui.QMessageBox.ActionRole)
+        # Set stylesheet
+        msg.setStyleSheet("QLabel{ color:rgb(202, 202, 202); }" +
+                          "QMessageBox{ background-color:rgb(55, 55, 55);}" +
+                          "QPushButton{ background-color:rgb(15,15,15); color:rgb(202, 202, 202);}")
+
+        # Move box to center of screen
+        box_size = msg.sizeHint()
+        screen_size = QtGui.QDesktopWidget().screen().rect()
+        msg.move((screen_size.width() / 2 - box_size.width() / 2), (screen_size.height() / 2 - box_size.height() / 2))
+
+        msg.exec_()
+
+        self.wait_for_embryos_msg_box_decision_signal.emit(BUTTON_CONTINUE)
 
     def advance_plate_well(self):
         plating_order = self.settings.value("quick_settings/plating_order").toString()
@@ -358,7 +386,7 @@ class PickAndPlateCycleHandler(QtCore.QThread):
             while self.button_state == BUTTON_WAIT:
                 if run_once:
                     self.move_z(self.z_traverse_height)
-                    self.move_x_y(0,0)
+                    self.move_x_y(0, 0)
                     self.no_embryos_msg_box_show_signal.emit()
                     run_once = False
 
@@ -386,13 +414,13 @@ class PickAndPlateCycleHandler(QtCore.QThread):
 
         # Set stylesheet
         msg.setStyleSheet("QLabel{ color:rgb(202, 202, 202); }" +
-        "QMessageBox{ background-color:rgb(55, 55, 55);}" +
-        "QPushButton{ background-color:rgb(15,15,15); color:rgb(202, 202, 202);}")
+                          "QMessageBox{ background-color:rgb(55, 55, 55);}" +
+                          "QPushButton{ background-color:rgb(15,15,15); color:rgb(202, 202, 202);}")
 
         # Move box to center of screen
         box_size = msg.sizeHint()
         screen_size = QtGui.QDesktopWidget().screen().rect()
-        msg.move((screen_size.width()/2 - box_size.width()/2), (screen_size.height()/2 - box_size.height()/2) )
+        msg.move((screen_size.width() / 2 - box_size.width() / 2), (screen_size.height() / 2 - box_size.height() / 2))
 
         msg.exec_()
 
@@ -402,13 +430,12 @@ class PickAndPlateCycleHandler(QtCore.QThread):
         elif clicked_button == exit_button:
             self.no_embryos_msg_decision_signal.emit(BUTTON_EXIT)
 
-
     def on_msg_decision_made_slot(self, decision):
         self.button_state = decision
 
-    ########## Movement and Controller Methods ###########
+    # ######### Movement and Controller Methods ###########
     def move_x_y(self, x, y):
-        #start = time.time()
+        # start = time.time()
         self.controller_command_complete = False
         self.x_y_move_request_signal.emit(x, y)
         while not self.controller_command_complete:
@@ -418,10 +445,10 @@ class PickAndPlateCycleHandler(QtCore.QThread):
     def move_x_y_timed(self, x, y, seconds):
         self.controller_command_complete = False
 
-        delta_x = abs(x-self.tinyg_x_location)
-        delta_y = abs(y-self.tinyg_y_location)
+        delta_x = abs(x - self.tinyg_x_location)
+        delta_y = abs(y - self.tinyg_y_location)
 
-        feedrate = (sqrt(pow(delta_x, 2) + pow(delta_y, 2))/seconds)*60  #Feedrate is in mm/min
+        feedrate = (sqrt(pow(delta_x, 2) + pow(delta_y, 2)) / seconds) * 60  # Feedrate is in mm/min
 
         self.x_y_move_request_with_feedrate_signal.emit(x, y, feedrate)
         while not self.controller_command_complete:
@@ -469,13 +496,13 @@ class PickAndPlateCycleHandler(QtCore.QThread):
             # self.logger.info("Waiting for init complete")
             self.msleep(150)
 
-    ########## Image Methods ###########
+    # ######### Image Methods ###########
     def make_current_and_last_pick_images(self, embryo_x, embryo_y):
         self.last_pick_qimage = self.current_pick_qimage
         current_pick_raw = self.crop_image(self.cropped_only_raw, embryo_x, embryo_y)
         current_pick_raw = cv2.resize(current_pick_raw, (150, 150))
-        cv2.line(current_pick_raw, (0, 150/2), (150, 150/2), (255, 0, 0), 1)
-        cv2.line(current_pick_raw, (150/2, 0), (150/2, 150), (255, 0, 0), 1)
+        cv2.line(current_pick_raw, (0, 150 / 2), (150, 150 / 2), (255, 0, 0), 1)
+        cv2.line(current_pick_raw, (150 / 2, 0), (150 / 2, 150), (255, 0, 0), 1)
         self.current_pick_qimage = self.convert_to_qimage(current_pick_raw)
 
         self.pick_images_displayed = False
@@ -490,23 +517,22 @@ class PickAndPlateCycleHandler(QtCore.QThread):
     def convert_to_qimage(input_matrix):
         return qimage2ndarray.array2qimage(input_matrix)
 
-
     @staticmethod
     def crop_image(input_matrix, embryo_x, embryo_y):
         side_length = 75
 
-        x1 = embryo_x - (side_length/2)
-        x2 = embryo_x + (side_length/2)
-        y1 = embryo_y - (side_length/2)
-        y2 = embryo_y + (side_length/2)
+        x1 = embryo_x - (side_length / 2)
+        x2 = embryo_x + (side_length / 2)
+        y1 = embryo_y - (side_length / 2)
+        y2 = embryo_y + (side_length / 2)
 
         cropped = input_matrix[y1:y2, x1:x2]
 
         return cropped
 
-    ########## General Informational Display Methods ###########
+    # ######### General Informational Display Methods ###########
 
-    ##########  ###########
+    # #########  ###########
     def run_cycle_init(self):
         self.set_motors(True)
         self.cycle_run_state_change_signal.emit(True, self.settings.value("quick_settings/embryo_type").toString())
@@ -515,6 +541,15 @@ class PickAndPlateCycleHandler(QtCore.QThread):
         self.run_hardware_init()
         self.set_lights(1000)
         self.move_z(self.z_traverse_height)
+
+        self.button_state = BUTTON_WAIT
+        self.wait_for_embryos_msg_box_show_signal.emit()
+
+        while self.button_state != BUTTON_CONTINUE:
+            self.set_motors(True)
+            self.cycle_run_image_request_signal.emit()
+            self.data_received = False
+            self.msleep(250)
 
         self.cycle_run_image_request_signal.emit()
         self.data_received = False
@@ -529,11 +564,11 @@ class PickAndPlateCycleHandler(QtCore.QThread):
         self.move_a(100)
         self.move_z(self.z_traverse_height)
 
-        self.move_x_y(0,0)
+        self.move_x_y(0, 0)
         self.set_lights(0)
         self.interface_cycle_stop_signal.emit()
         self.set_motors(False)
-        self.logger.info("Cycle completed in " + str((self.stop_time-self.start_time)/60) + " minutes.")
+        self.logger.info("Cycle completed in " + str((self.stop_time - self.start_time) / 60) + " minutes.")
 
     def on_cycle_start_pressed_slot(self):
         self.cycle_running_flag = True
@@ -563,13 +598,16 @@ class PickAndPlateCycleHandler(QtCore.QThread):
             prefix = "c_"
 
         self.z_vel = self.settings.value("system/plating_calibration/" + prefix + "z_velocity").toInt()[0]
-        self.placement_dwell = self.settings.value("system/plating_calibration/" + prefix + "placement_dwell").toInt()[0]
-        self.e_fall_time = self.settings.value("system/plating_calibration/" + prefix + "embryo_fall_time").toDouble()[0]
+        self.placement_dwell = self.settings.value("system/plating_calibration/" + prefix + "placement_dwell").toInt()[
+            0]
+        self.e_fall_time = self.settings.value("system/plating_calibration/" + prefix + "embryo_fall_time").toDouble()[
+            0]
         self.pick_height = self.settings.value("system/plating_calibration/" + prefix + "pick_height").toDouble()[0]
         self.place_height = self.settings.value("system/plating_calibration/" + prefix + "place_height").toDouble()[0]
         self.pick_volume = self.settings.value("system/plating_calibration/" + prefix + "pick_volume").toDouble()[0]
         self.place_volume = self.settings.value("system/plating_calibration/" + prefix + "place_volume").toDouble()[0]
-        self.pipette_diameter = self.settings.value("system/plating_calibration/" + prefix + "tube_diameter").toDouble()[0]
+        self.pipette_diameter = \
+        self.settings.value("system/plating_calibration/" + prefix + "tube_diameter").toDouble()[0]
 
         # Offset for pipette size adjustment
         cal_pipette_radius = CAL_PIPETTE_DIAMETER / 2
