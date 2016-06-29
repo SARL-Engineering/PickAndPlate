@@ -269,7 +269,6 @@ class PickAndPlateCycleHandler(QtCore.QThread):
             # Get heights off bottom of dish and plate for tip placement
             pick_height_actual = self.pick_height + self.dish_min
             place_depth_actual = self.place_height + self.plate_min
-            place_depth_reclaim = 5 + self.plate_min
 
             # Move up and over to found embryo co-ordinates
             self.move_z(self.z_traverse_height)
@@ -340,7 +339,7 @@ class PickAndPlateCycleHandler(QtCore.QThread):
         msg.setWindowFlags(QtCore.Qt.WindowStaysOnTopHint)
 
         # Make and add custom labeled buttons
-        continue_button = msg.addButton("Continue", QtGui.QMessageBox.ActionRole)
+        msg.addButton("Continue", QtGui.QMessageBox.ActionRole)
         # Set stylesheet
         msg.setStyleSheet("QLabel{ color:rgb(202, 202, 202); }" +
                           "QMessageBox{ background-color:rgb(55, 55, 55);}" +
@@ -607,7 +606,7 @@ class PickAndPlateCycleHandler(QtCore.QThread):
         self.pick_volume = self.settings.value("system/plating_calibration/" + prefix + "pick_volume").toDouble()[0]
         self.place_volume = self.settings.value("system/plating_calibration/" + prefix + "place_volume").toDouble()[0]
         self.pipette_diameter = \
-        self.settings.value("system/plating_calibration/" + prefix + "tube_diameter").toDouble()[0]
+            self.settings.value("system/plating_calibration/" + prefix + "tube_diameter").toDouble()[0]
 
         # Offset for pipette size adjustment
         cal_pipette_radius = CAL_PIPETTE_DIAMETER / 2
