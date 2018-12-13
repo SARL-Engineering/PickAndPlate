@@ -7,7 +7,7 @@ sleep 5
 export DISPLAY=:0
 
 # Sets the background
-feh --bg-scale /home/debian/PickAndPlate_Extras/pnp-background.png
+feh --bg-scale /home/debian/PickAndPlate/Resources/pnp-background.png
 
 # Short sleep so you can see the background
 sleep 1.5

@@ -37,7 +37,7 @@ from math import sqrt, pow
 import qimage2ndarray
 import cv2
 import time
-from random import randint
+from random import randint, choice
 
 # Custom imports
 
@@ -138,7 +138,7 @@ class PickAndPlateCycleHandler(QtCore.QThread):
 
         self.e_fall_time = 0
         self.placement_dwell = 0
-        self.z_traverse_height = 20
+        self.z_traverse_height = 0
         self.z_vel = 0
 
         self.pipette_diameter = 0
@@ -518,16 +518,14 @@ class PickAndPlateCycleHandler(QtCore.QThread):
 
     @staticmethod
     def crop_image(input_matrix, embryo_x, embryo_y):
-        side_length = 75
+        side_length_halved = 75 / 2
 
-        x1 = embryo_x - (side_length / 2)
-        x2 = embryo_x + (side_length / 2)
-        y1 = embryo_y - (side_length / 2)
-        y2 = embryo_y + (side_length / 2)
+        x1 = int(embryo_x - side_length_halved)
+        x2 = int(embryo_x + side_length_halved)
+        y1 = int(embryo_y - side_length_halved)
+        y2 = int(embryo_y + side_length_halved)
 
-        cropped = input_matrix[y1:y2, x1:x2]
-
-        return cropped
+        return input_matrix[y1:y2, x1:x2]
 
     # ######### General Informational Display Methods ###########
 
@@ -591,10 +589,7 @@ class PickAndPlateCycleHandler(QtCore.QThread):
         self.start_time = time.time()
 
         # Cal Vars
-        if self.run_embryo_type == "Dechorionated":
-            prefix = "d_"
-        else:
-            prefix = "c_"
+        prefix = "d_" if self.run_embryo_type == "Dechorionated" else "c_"
 
         self.z_vel = self.settings.value("system/plating_calibration/" + prefix + "z_velocity").toInt()[0]
         self.placement_dwell = self.settings.value("system/plating_calibration/" + prefix + "placement_dwell").toInt()[

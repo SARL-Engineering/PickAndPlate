@@ -70,7 +70,8 @@ class PickAndPlateLogger(QtCore.QObject):
         # ########## Place divider in log file to see new program launch ##########
         self.add_startup_log_buffer_text()
 
-    def make_logging_paths(self):
+    @staticmethod
+    def make_logging_paths():
         if not exists(application_logging_path):
             makedirs(application_logging_path)
 

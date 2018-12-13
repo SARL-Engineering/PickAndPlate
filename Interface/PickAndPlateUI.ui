@@ -1574,7 +1574,7 @@ QTabBar::tab:last{
 }</string>
           </property>
           <property name="currentIndex">
-           <number>0</number>
+           <number>1</number>
           </property>
           <widget class="QWidget" name="tab_6">
            <attribute name="title">
@@ -2785,8 +2785,8 @@ p, li { white-space: pre-wrap; }
                   <rect>
                    <x>0</x>
                    <y>0</y>
-                   <width>414</width>
-                   <height>193</height>
+                   <width>478</width>
+                   <height>194</height>
                   </rect>
                  </property>
                  <attribute name="label">
@@ -2919,6 +2919,21 @@ p, li { white-space: pre-wrap; }
                         <property name="styleSheet">
                          <string notr="true">background-color:rgb(55,55,55)</string>
                         </property>
+                        <item>
+                         <property name="text">
+                          <string>150</string>
+                         </property>
+                        </item>
+                        <item>
+                         <property name="text">
+                          <string>100</string>
+                         </property>
+                        </item>
+                        <item>
+                         <property name="text">
+                          <string>50</string>
+                         </property>
+                        </item>
                         <item>
                          <property name="text">
                           <string>10</string>

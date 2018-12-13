@@ -252,8 +252,17 @@ class SerialHandler(QtCore.QThread):
 
     def reset_tinyg(self):
         self.serial_out_queue.append("^x\n")
-        # self.serial_out_queue.append(self.convert_to_json({'ex':0}))
-        # self.serial_out_queue.append(self.convert_to_json({'ja':100000}))
+
+        # ##### Current Tune
+        self.serial_out_queue.append(self.convert_to_json({'xfr': 6000}))
+        self.serial_out_queue.append(self.convert_to_json({'xvm': 6000}))
+        self.serial_out_queue.append(self.convert_to_json({'yfr': 5000}))
+        self.serial_out_queue.append(self.convert_to_json({'yvm': 5000}))
+        self.serial_out_queue.append(self.convert_to_json({'xjm': 2000}))
+        self.serial_out_queue.append(self.convert_to_json({'yjm': 2000}))
+        # #####
+
+        # Misc for changing settings when needed
         # self.serial_out_queue.append(self.convert_to_json({'mt':90}))
         # self.serial_out_queue.append(self.convert_to_json({'1pm':1}))
         # self.serial_out_queue.append(self.convert_to_json({'xfr':10000}))
@@ -290,22 +299,22 @@ class SerialHandler(QtCore.QThread):
 
     def on_z_homing_requested_slot(self, precision):
         if precision == ROUGH:
-            self.serial_out_queue.append(self.convert_to_json({'zsv': 500}))
+            self.serial_out_queue.append(self.convert_to_json({'zsv': 200}))
             self.msleep(30)
-            self.serial_out_queue.append(self.convert_to_json({'zsn': 0}))
-            self.msleep(30)  # Required for config changes
-            self.serial_out_queue.append(self.convert_to_json({'zsx': 1}))
-            self.msleep(30)  # Required for config changes
+            # self.serial_out_queue.append(self.convert_to_json({'zsn': 0}))
+            # self.msleep(30)  # Required for config changes
+            # self.serial_out_queue.append(self.convert_to_json({'zsx': 1}))
+            # self.msleep(30)  # Required for config changes
             self.serial_out_queue.append(self.convert_to_json({'gc': 'G28.2 Z0'}))
             self.msleep(30)  # Required for config changes
             self.serial_out_queue.append(self.convert_to_json({'gc': 'G90 G1 Z5'}))
         elif precision == FINE:
-            self.serial_out_queue.append(self.convert_to_json({'zsv': 100}))
-            self.msleep(30)
-            self.serial_out_queue.append(self.convert_to_json({'zsn': 1}))
-            self.msleep(30)  # Required for config changes
-            self.serial_out_queue.append(self.convert_to_json({'zsx': 0}))
-            self.msleep(30)  # Required for config changes
+            # self.serial_out_queue.append(self.convert_to_json({'zsv': 100}))
+            # self.msleep(30)
+            # self.serial_out_queue.append(self.convert_to_json({'zsn': 1}))
+            # self.msleep(30)  # Required for config changes
+            # self.serial_out_queue.append(self.convert_to_json({'zsx': 0}))
+            # self.msleep(30)  # Required for config changes
             self.serial_out_queue.append(self.convert_to_json({'gc': 'G28.2 Z0'}))
 
     def on_x_y_homing_requested_slot(self):
@@ -566,11 +575,11 @@ class PickAndPlateController(QtCore.QThread):
 
         self.initial_system_homing_request()
 
-        self.light_change_requested(1000)
-        self.x_y_move_request(precision_z_x_center, precision_z_y_center)
-        self.z_axis_move_request(-20)
-        self.z_home_request(FINE)
-        self.x_y_axis_precision_home_request()
+        # self.light_change_requested(1000)
+        # self.x_y_move_request(precision_z_x_center, precision_z_y_center)
+        # self.z_axis_move_request(-20)
+        # self.z_home_request(FINE)
+        # self.x_y_axis_precision_home_request()
         self.msleep(3500)
 
         while (self.tinyg_x_location != 0) or (self.tinyg_y_location != 0):
