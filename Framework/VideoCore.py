@@ -549,7 +549,7 @@ class PickAndPlateVideo(QtCore.QThread):
 
     def get_camera_frame(self):
         #self.raw_frame = cv2.imread('images/chorionated.png', cv2.IMREAD_COLOR)
-        return_val, self.raw_frame = self.video_camera.retrieve()
+        return_val, self.raw_frame = self.video_camera.read()
 
         if self.take_image:
             if self.image_count >= 12:
